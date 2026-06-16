@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                          *{margin:0;padding:0;box-sizing:border-box;}
+                          body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;}
+                          #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+                          #cab h2{font-size:14px;font-weight:700;color:#1e293b;flex:1;}
+                          #inf{font-size:11px;color:#64748b;}
+                          #tot{font-size:11px;color:#16a34a;font-weight:700;}
+                          #mapa{flex:1;}
+                          .leaflet-tooltip-custom{background:rgba(15,23,42,.88);color:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;font-size:11px;line-height:1.4;max-width:180px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+                          .leaflet-tooltip-custom::before{display:none;}
+                          .popup-content{font-size:12px;line-height:1.6;min-width:160px;}
+                          .popup-content strong{font-size:13px;color:#1e293b;}
+                          .popup-zona{color:#3b82f6;font-weight:600;}
+                          .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        <div id='cab'>
+                          <span style='font-size:16px'>📍</span>
+                          <h2 id='titulo'>Mapa georreferenciado</h2>
+                          <span id='inf'></span>
+                          <span id='tot'></span>
+                        </div>
+                        <div id='mapa'></div>
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datos=[{"FechaCc":"15/06/2026","Doi":"15858530","Nombre":"MILLA DIAZ DE JARA JULY GLADYS                                                                      ","Descripcion":"CALLE LA UNION MZ D LT 5","Zona":"HUACHO","Total":126.01,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-10.7513765,"Longitud":-77.7545854},{"FechaCc":"15/06/2026","Doi":"15860362","Nombre":"ZUÑIGA CARLOS, ESPERANZA ZOCIMA                                                                     ","Descripcion":"SR DE LOS MILAGROS D-4","Zona":"BARRANCA A                              ","Total":61.2,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-10.7486444,"Longitud":-77.7528986},{"FechaCc":"15/06/2026","Doi":"41223053","Nombre":"CARHUAPOMA TRUJILLO RAUL JULIO                                                                      ","Descripcion":"CA.LIMONCILLO SN (ESPALDA DE MANUEL BUSTAMANTE)","Zona":"HUACHO","Total":65.45,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-10.7489202,"Longitud":-77.7509114},{"FechaCc":"15/06/2026","Doi":"41676268","Nombre":"LEYVA ROJAS NOEMI                                                                                   ","Descripcion":"BUENAS VISTA LADO AVICOLA","Zona":"HUACHO","Total":107.27,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-10.7478075,"Longitud":-77.7487928},{"FechaCc":"15/06/2026","Doi":"45426566","Nombre":"CORPUS MARIÑO DALMIRA MARIELA                                                                       ","Descripcion":"URBA LAS LADERAS MZ I LOTE 3","Zona":"HUACHO","Total":36.36,"Distribucion":"Dismar[0]-Lider[1]","Latitud":-10.7467739,"Longitud":-77.7501225}];
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(mapa);
+                        const zonasUnicas=[...new Set(datos.map(p=>p.Zona))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=>colorPorZona[z]=PALETA[i%PALETA.length]);
+                        let totalGeneral=0;
+                        const bounds=[];
+                        datos.forEach((p,idx)=>{
+                          totalGeneral+=p.Total;
+                          const num=idx+1;
+                          const color=colorPorZona[p.Zona]||'#3b82f6';
+                          const fs=num>=100?7:num>=10?8:10;
+                          const icon=L.divIcon({className:'',html:`<svg width='26' height='26' viewBox='0 0 26 26'><circle cx='13' cy='13' r='11' fill='${color}' stroke='#fff' stroke-width='2'/><text x='13' y='13' text-anchor='middle' dominant-baseline='central' fill='#fff' font-size='${fs}' font-family='Segoe UI' font-weight='700'>${num}</text></svg>`,iconSize:[26,26],iconAnchor:[13,13]});
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+                          const palabras=p.Nombre.trim().split(/\s+/);
+                          const l1=palabras.slice(0,2).join(' ');
+                          const l2=palabras.slice(2).join(' ');
+                          const distrib=p.Distribucion?`<br><span style='color:#94e4b0;font-size:10px'>${p.Distribucion}</span>`:'';
+                          const total=p.Total?`<br><span style='color:#fbbf24;font-size:10px;font-weight:700'>S/ ${p.Total.toFixed(2)}</span>`:'';
+                          marker.bindTooltip(`<span style='color:#fbbf24;font-weight:700'>#${num}</span> `+(l2?`<b>${l1}</b><br>${l2}${distrib}${total}`:`<b>${l1}</b>${distrib}${total}`),{permanent:false,direction:'top',offset:[0,-14],className:'leaflet-tooltip-custom'});
+                          marker.bindPopup(`<div class='popup-content'><strong>#${num} — ${p.Nombre}</strong><br><span class='popup-zona'>📌 ${p.Zona}</span><br>📋 ${p.Descripcion}<br>🚚 ${p.Distribucion}<br><span class='popup-total'>💰 S/ ${p.Total.toFixed(2)}</span></div>`,{maxWidth:260});
+                          marker.addTo(mapa);
+                        });
+                        if(bounds.length>0) mapa.fitBounds(bounds,{padding:[30,30]});
+                        const zonaLabel=zonasUnicas.length===1?`Zona: ${zonasUnicas[0]}`:`${zonasUnicas.length} zonas`;
+                        document.getElementById('titulo').textContent=`Mapa — ${zonaLabel}`;
+                        document.getElementById('inf').textContent=`📍 ${datos.length} puntos`;
+                        document.getElementById('tot').textContent=`Total: S/ ${totalGeneral.toFixed(2)}`;
+                        </script>
+                        </body>
+                        </html>

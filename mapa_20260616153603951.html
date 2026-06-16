@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+                        #cab h2{font-size:14px;font-weight:700;color:#1e293b;flex:1;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:11px;color:#16a34a;font-weight:700;}
+                        #mapa{height:70vh;}
+                        .leaflet-tooltip-custom{background:rgba(15,23,42,.88);color:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;font-size:11px;line-height:1.4;max-width:180px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+                        .leaflet-tooltip-custom:before{display:none;}
+                        .popup-content{font-size:12px;line-height:1.6;min-width:160px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        #detalle-impresion{padding:16px;font-family:'Segoe UI',sans-serif;font-size:11px;}
+                        .det-titulo{font-size:14px;font-weight:700;color:#1e293b;margin-bottom:4px;}
+                        .det-subtitulo{font-size:11px;color:#64748b;margin-bottom:14px;}
+                        .det-zona-header{display:flex;align-items:center;gap:8px;background:#f1f5f9;padding:5px 8px;margin-top:12px;margin-bottom:4px;border-radius:4px;font-weight:700;font-size:11px;color:#1e293b;}
+                        .det-zona-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+                        .det-table{width:100%;border-collapse:collapse;font-size:10px;table-layout:auto;}
+                        .det-table th{background:#e2e8f0;color:#334155;padding:4px 6px;text-align:left;font-weight:700;}
+                        .det-table td{padding:3px 6px;border-bottom:1px solid #e2e8f0;color:#334155;vertical-align:top;word-break:break-word;}
+                        .det-table tr:nth-child(even) td{background:#f8fafc;}
+                        .det-table .col-num{width:24px;white-space:nowrap;}
+                        .det-table .col-geo{width:42px;text-align:center;white-space:nowrap;font-size:12px;}
+                        .det-table .col-dist{width:90px;white-space:nowrap;}
+                        .det-table .col-total{width:60px;text-align:right;white-space:nowrap;}
+                        .det-num{font-weight:700;color:#3b82f6;}
+                        .det-geo-si{font-weight:700;color:#16a34a;text-align:center;}
+                        .det-geo-no{font-weight:700;color:#dc2626;text-align:center;}
+                        .det-total-zona{text-align:right;font-weight:700;color:#16a34a;padding:3px 6px;font-size:10px;}
+                        .det-total-general{margin-top:14px;padding:6px 10px;background:#1e293b;color:#fff;border-radius:4px;text-align:right;font-weight:700;font-size:12px;}
+                        </style>
+                        </head>
+                        <body>
+                        <div id='cab'>
+                          <span style='font-size:16px;'>Mapa</span>
+                          <h2 id='titulo'>Mapa georreferenciado</h2>
+                          <span id='inf'></span>
+                          <span id='tot'></span>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='detalle-impresion'>
+                          <div class='det-titulo'>Detalle completo de la consulta</div>
+                          <div class='det-subtitulo' id='det-subtitulo'></div>
+                          <div id='det-contenido'></div>
+                          <div class='det-total-general' id='det-total-general'></div>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"15/06/2026","Doi":"10180581109","Nombre":"ZAVALETA  MEDINA , EDITA  VIOLETA                                                                   ","Descripcion":"MCDO VICTORIA PTO 83 ENTRADA PRIMERA PUERTA ABANCAY","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":125.73,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713899,"Longitud":-78.9909174},{"FechaCc":"15/06/2026","Doi":"10195750438","Nombre":"BELIANA SEGURA ALAYO                                                                                ","Descripcion":"ABANCAY 1867 PORVENIR                   ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":10.32,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0727824,"Longitud":-78.9915864},{"FechaCc":"15/06/2026","Doi":"10431868968","Nombre":"BECERRA IZQUIERDO, YUBERLI                                                                          ","Descripcion":"MZ. A LT. 1 VICTOR RAUL 1 ETAPA PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":18.3,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0731989,"Longitud":-78.9884936},{"FechaCc":"15/06/2026","Doi":"17931478","Nombre":"BURGOS ZAVALETA LUISA                                                                               ","Descripcion":"MZ 20 ALTE 1 V RAULII ETAPAPORVENI","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":74.84,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0707437,"Longitud":-78.9856791},{"FechaCc":"15/06/2026","Doi":"17945511","Nombre":"HILARIO CABRERA VICTOR PORFIRIO                                                                     ","Descripcion":"PSTO. 39 MERCADO VIRGEN DEL CARMEN V. RAUL PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":39.72,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678912,"Longitud":-78.9854485},{"FechaCc":"15/06/2026","Doi":"18096369","Nombre":"CAMPOS VARAS ANA RAQUEL                                                                             ","Descripcion":"INDEPENDENCIA 1732                      ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":38.22,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0739388,"Longitud":-78.9926916},{"FechaCc":"15/06/2026","Doi":"19033235","Nombre":"MENDEZ MENDEZ WAGNER                                                                                ","Descripcion":"MZA E  LTE  25  VICTOR RAUL II ETAPA","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":99.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0671577,"Longitud":-78.9847706},{"FechaCc":"15/06/2026","Doi":"19096993","Nombre":"VILLARREAL MERCADO WALTER                                                                           ","Descripcion":"MCD VICTORIA PTO 175 PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0711066,"Longitud":-78.9906158},{"FechaCc":"15/06/2026","Doi":"19576501","Nombre":"ARAUJO QUILICHE ANA CLAIRE                                                                          ","Descripcion":"CAPIRONA 1607B PORVENIR                 ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":177.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.07499,"Longitud":-78.9940717},{"FechaCc":"15/06/2026","Doi":"19680054","Nombre":"AVALOS DE SAUNA MARTINA                                                                             ","Descripcion":"CAPIRONA 1961 PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":67.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0714279,"Longitud":-78.9925971},{"FechaCc":"15/06/2026","Doi":"19868882","Nombre":"ESQUIVEL SALINAS MARLENY                                                                            ","Descripcion":"MCDVICTORIAPTO216","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":41.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713319,"Longitud":-78.9906771},{"FechaCc":"15/06/2026","Doi":"40380510","Nombre":"GRAUS CHAVEZ PAULA ARACELY                                                                          ","Descripcion":"MZ G LT 25 SECT 04 ETAPA VÍCTOR RAÚL    ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":42.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0667284,"Longitud":-78.9851878},{"FechaCc":"15/06/2026","Doi":"40690164","Nombre":"ORTIZ VALLES, IRMA  NELIDA                                                                          ","Descripcion":"MZ 02 LT 34 VÍCTOR RAÚL 1 ETAPA A MEDIA CUADRA DEL COLISEO","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":22.02,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.071363,"Longitud":-78.9891856},{"FechaCc":"15/06/2026","Doi":"41203815","Nombre":"SALINAS AVALOS DE ZAVALETA NOEMI VERONICA                                                           ","Descripcion":"BARCELONA 1575 EL PORVENIR              ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":49.62,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0752083,"Longitud":-78.9947133},{"FechaCc":"15/06/2026","Doi":"41348932","Nombre":"GONZALES ALAYA, DIONICIA                                                                            ","Descripcion":"MZ Y LTE 5 II ETAPA VALLLE SOL PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":34.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0644628,"Longitud":-78.9770409},{"FechaCc":"15/06/2026","Doi":"42340914","Nombre":"RAMIREZ CARBAJAL, ANGELA DOMINGA                                                                    ","Descripcion":"MZ E LT 71 VALLE SOL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":53.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0663481,"Longitud":-78.979536},{"FechaCc":"15/06/2026","Doi":"42626788","Nombre":"DELGADO NUÑEZ ALEXANDER                                                                             ","Descripcion":"MDOVIRGENDELCARMENPTO4VÍCTORRAÚL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":59.85,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678953,"Longitud":-78.985444},{"FechaCc":"15/06/2026","Doi":"46566691","Nombre":"GUTIERREZ GUZMAN KARLA                                                                              ","Descripcion":"MZ22ALTE7 V RAUL IIETAPA","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":61.2,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713218,"Longitud":-78.9864947},{"FechaCc":"15/06/2026","Doi":"47654850","Nombre":"MARIN PEREZ, MAYRA EDITH                                                                            ","Descripcion":"VICTOR RAUL MZ 22 LTE 7 II ETP PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":59.85,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713262,"Longitud":-78.9865393},{"FechaCc":"15/06/2026","Doi":"60838483","Nombre":"ALBERCA CENAS, TATIANA  ELIZABETH                                                                   ","Descripcion":"MERCADO VIRGEN DEL CARMEN PUESTO 19","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":24.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678149,"Longitud":-78.985181},{"FechaCc":"15/06/2026","Doi":"70170779","Nombre":"HARO GARCIA, LINA  CONSUELO                                                                         ","Descripcion":"MZ 22 LT 14 SEGUNDA ETAPA VÍCTOR RAÚL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":215.22,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0714488,"Longitud":-78.9870672},{"FechaCc":"15/06/2026","Doi":"70404707","Nombre":"RODRIGUEZ TOMAS DORALISA                                                                            ","Descripcion":"MERCADO VIRGEN DEL CARMEN PT 38         ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":19.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.068008,"Longitud":-78.9852633},{"FechaCc":"15/06/2026","Doi":"70431777","Nombre":"CRUZ JARA ARLET                                                                                     ","Descripcion":"MZ G LT 9 1ERA ETAPA VALLE SOL          ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":19.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0675893,"Longitud":-78.9797524},{"FechaCc":"15/06/2026","Doi":"71330570","Nombre":"JACOBO MOYA YESICA GIOVANI                                                                          ","Descripcion":"VALLE SOL LLETAPA MZT LT01                                            ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":67.65,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0639366,"Longitud":-78.9791904},{"FechaCc":"15/06/2026","Doi":"72478161","Nombre":"BURGOS CASTILLO, LILY MILAGRITOS                                                                    ","Descripcion":"MZ A' LT 01 (BOTICA M&N) 3RA ETAPA VALLE SOL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":86.25,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0640123,"Longitud":-78.9766392},{"FechaCc":"15/06/2026","Doi":"72971021","Nombre":"ZARATE AGUSTIN, ASUCENA                                                                             ","Descripcion":"Av.Revolucion 2171 porvenir","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":300.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0702645,"Longitud":-78.9900865}];
+                        const datosTodos = [{"FechaCc":"15/06/2026","Doi":"10180581109","Nombre":"ZAVALETA  MEDINA , EDITA  VIOLETA                                                                   ","Descripcion":"MCDO VICTORIA PTO 83 ENTRADA PRIMERA PUERTA ABANCAY","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":125.73,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713899,"Longitud":-78.9909174},{"FechaCc":"15/06/2026","Doi":"10182203390","Nombre":"ESQUIVEL ENCO VIOLETA SONIA                                                                         ","Descripcion":"SUCRE 2045MIGUEL GRAU EL PORVENIR       ","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":30.06,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"10190590611","Nombre":"CIPRA  VELASQUEZ , TEONILA  ELIZABETH                                                               ","Descripcion":"MZ. 13 LT. 2 V. RAUL ATRÁS DE LA POZA","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":14.8,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"10195750438","Nombre":"BELIANA SEGURA ALAYO                                                                                ","Descripcion":"ABANCAY 1867 PORVENIR                   ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":10.32,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0727824,"Longitud":-78.9915864},{"FechaCc":"15/06/2026","Doi":"10405284982","Nombre":"RONDO VEREAU, LEYLI HAYDEE                                                                          ","Descripcion":"VICTOR RAÚL III ETAPA MZ. J. LT. 6 AV. VALLE SOL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":121.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"10431868968","Nombre":"BECERRA IZQUIERDO, YUBERLI                                                                          ","Descripcion":"MZ. A LT. 1 VICTOR RAUL 1 ETAPA PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":18.3,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0731989,"Longitud":-78.9884936},{"FechaCc":"15/06/2026","Doi":"10460330519","Nombre":"MORILLO QUEPQUE LEYDI                                                                               ","Descripcion":"MZ 15 LT 21 VICTOR RAUL                                               ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":10.8,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"17931478","Nombre":"BURGOS ZAVALETA LUISA                                                                               ","Descripcion":"MZ 20 ALTE 1 V RAULII ETAPAPORVENI","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":74.84,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0707437,"Longitud":-78.9856791},{"FechaCc":"15/06/2026","Doi":"17945511","Nombre":"HILARIO CABRERA VICTOR PORFIRIO                                                                     ","Descripcion":"PSTO. 39 MERCADO VIRGEN DEL CARMEN V. RAUL PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":39.72,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678912,"Longitud":-78.9854485},{"FechaCc":"15/06/2026","Doi":"17946635","Nombre":"QUIPUZCO FLORES ADELI                                                                               ","Descripcion":"AV SÁNCHEZ CARRIÓN 1764 EL PORVENIR     ","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":28.52,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"17962025","Nombre":"RIVERA EUSTAQUIO PALMIRA                                                                            ","Descripcion":"AV REVOLUCIÓN 1508 GRAN CHIMU A UNA CUADRA DEL MECHE","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":31.1,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18063897","Nombre":"VILLANUEVA ESQUIVEL, JANNET  IRENE                                                                  ","Descripcion":"ASCENCIO VERGARA 1750 COSTADO BOTICA DR, JAUSTER","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":2.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18075355","Nombre":"BURGOS FERNANDEZ MARIA ELIZABETH                                                                    ","Descripcion":"CALLESUCRE 1968","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":29.4,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18080377","Nombre":"GONZALES MARIÑOS ROSA ELIZABETH                                                                     ","Descripcion":"CALLE CAPIRONA 2198 EL PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":11.93,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18096369","Nombre":"CAMPOS VARAS ANA RAQUEL                                                                             ","Descripcion":"INDEPENDENCIA 1732                      ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":38.22,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0739388,"Longitud":-78.9926916},{"FechaCc":"15/06/2026","Doi":"18096402","Nombre":"ZAVALETA EUSTAQUIO IRIS                                                                             ","Descripcion":"MCD.MIGUEL GRAU PTO B50","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":31.74,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18096636","Nombre":"CASTRO VARGAS JENY                                                                                  ","Descripcion":"LIBERACION 1687 VÍCTOR RAUL.. BAJANDO POSTA MEDICA                    ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":19.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18108027","Nombre":"NAVEROS LUJAN JUANA                                                                                 ","Descripcion":"AV SÁNCHEZ CARRION MZ. N LOTE 15 EL PORVENIR","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18151179","Nombre":"CASTRO ARAUJO NOEMI                                                                                 ","Descripcion":"MCDO MIGUEL GRAU PSTO 203 EL PORVENIR","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":14.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"18163786","Nombre":"HUATAY RODRIGUEZ MARIBEL                                                                            ","Descripcion":"MCD.MIGUEL GRAU PTO257 EL PORVENIR     ","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":17.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"19033235","Nombre":"MENDEZ MENDEZ WAGNER                                                                                ","Descripcion":"MZA E  LTE  25  VICTOR RAUL II ETAPA","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":99.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0671577,"Longitud":-78.9847706},{"FechaCc":"15/06/2026","Doi":"19096993","Nombre":"VILLARREAL MERCADO WALTER                                                                           ","Descripcion":"MCD VICTORIA PTO 175 PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0711066,"Longitud":-78.9906158},{"FechaCc":"15/06/2026","Doi":"19576501","Nombre":"ARAUJO QUILICHE ANA CLAIRE                                                                          ","Descripcion":"CAPIRONA 1607B PORVENIR                 ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":177.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.07499,"Longitud":-78.9940717},{"FechaCc":"15/06/2026","Doi":"19680054","Nombre":"AVALOS DE SAUNA MARTINA                                                                             ","Descripcion":"CAPIRONA 1961 PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":67.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0714279,"Longitud":-78.9925971},{"FechaCc":"15/06/2026","Doi":"19868882","Nombre":"ESQUIVEL SALINAS MARLENY                                                                            ","Descripcion":"MCDVICTORIAPTO216","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":41.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713319,"Longitud":-78.9906771},{"FechaCc":"15/06/2026","Doi":"40380510","Nombre":"GRAUS CHAVEZ PAULA ARACELY                                                                          ","Descripcion":"MZ G LT 25 SECT 04 ETAPA VÍCTOR RAÚL    ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":42.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0667284,"Longitud":-78.9851878},{"FechaCc":"15/06/2026","Doi":"40690164","Nombre":"ORTIZ VALLES, IRMA  NELIDA                                                                          ","Descripcion":"MZ 02 LT 34 VÍCTOR RAÚL 1 ETAPA A MEDIA CUADRA DEL COLISEO","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":22.02,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.071363,"Longitud":-78.9891856},{"FechaCc":"15/06/2026","Doi":"41203815","Nombre":"SALINAS AVALOS DE ZAVALETA NOEMI VERONICA                                                           ","Descripcion":"BARCELONA 1575 EL PORVENIR              ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":49.62,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0752083,"Longitud":-78.9947133},{"FechaCc":"15/06/2026","Doi":"41348932","Nombre":"GONZALES ALAYA, DIONICIA                                                                            ","Descripcion":"MZ Y LTE 5 II ETAPA VALLLE SOL PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":34.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0644628,"Longitud":-78.9770409},{"FechaCc":"15/06/2026","Doi":"41701437","Nombre":"LUZ PUENTE MERY                                                                                     ","Descripcion":"CAPIRONA 1490 PORVENIR","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":77.1,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"42340914","Nombre":"RAMIREZ CARBAJAL, ANGELA DOMINGA                                                                    ","Descripcion":"MZ E LT 71 VALLE SOL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":53.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0663481,"Longitud":-78.979536},{"FechaCc":"15/06/2026","Doi":"42623048","Nombre":"ESCOBAR ESCOBAR, DEYSI MEREDIT                                                                      ","Descripcion":"PTO57MCDOMIGUELGARU","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":28.2,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"42626788","Nombre":"DELGADO NUÑEZ ALEXANDER                                                                             ","Descripcion":"MDOVIRGENDELCARMENPTO4VÍCTORRAÚL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":59.85,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678953,"Longitud":-78.985444},{"FechaCc":"15/06/2026","Doi":"42712374","Nombre":"TAPULLIMA CACHIQUE ISELA                                                                            ","Descripcion":"CALL SAN VALENTÍN 1ERA ETAP MZ 2 LTE 22","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":10.32,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"43367425","Nombre":"GONZALES POLO ZENAIDA YUSENIA                                                                       ","Descripcion":"CALLEABANCAY 1604                                                     ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":489.7,"Distribucion":"Dismar[2]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"44141476","Nombre":"CHILON NEYRA CINTHYA VERONICA                                                                       ","Descripcion":"CALLE INDEPENDENCIA 2273 GRAN CHIMU                                   ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":21.75,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"44253865","Nombre":"ARROYO LOZANO MARGARITA ROSMERY                                                                     ","Descripcion":"SAN LUIS 568 MIGUEL GRAU                                              ","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":14.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"45723863","Nombre":"MARQUINA GUTIERREZ, OLINDA HERLITA                                                                  ","Descripcion":"MERCADO MIGUEL GRAU PTO D 39 ENTRADA","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":18.17,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"46566691","Nombre":"GUTIERREZ GUZMAN KARLA                                                                              ","Descripcion":"MZ22ALTE7 V RAUL IIETAPA","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":61.2,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713218,"Longitud":-78.9864947},{"FechaCc":"15/06/2026","Doi":"47654850","Nombre":"MARIN PEREZ, MAYRA EDITH                                                                            ","Descripcion":"VICTOR RAUL MZ 22 LTE 7 II ETP PORVENIR","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":59.85,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0713262,"Longitud":-78.9865393},{"FechaCc":"15/06/2026","Doi":"47885751","Nombre":"JIMENEZ VILLANUEVA, RONALD  BARONI                                                                  ","Descripcion":"TRUJILLO","Zona":"REPARTO TRUJILLO","Total":13.7,"Distribucion":"Dismar[0]-Lider[1]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"60838483","Nombre":"ALBERCA CENAS, TATIANA  ELIZABETH                                                                   ","Descripcion":"MERCADO VIRGEN DEL CARMEN PUESTO 19","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":24.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0678149,"Longitud":-78.985181},{"FechaCc":"15/06/2026","Doi":"70170779","Nombre":"HARO GARCIA, LINA  CONSUELO                                                                         ","Descripcion":"MZ 22 LT 14 SEGUNDA ETAPA VÍCTOR RAÚL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":215.22,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0714488,"Longitud":-78.9870672},{"FechaCc":"15/06/2026","Doi":"70404707","Nombre":"RODRIGUEZ TOMAS DORALISA                                                                            ","Descripcion":"MERCADO VIRGEN DEL CARMEN PT 38         ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":19.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.068008,"Longitud":-78.9852633},{"FechaCc":"15/06/2026","Doi":"70431777","Nombre":"CRUZ JARA ARLET                                                                                     ","Descripcion":"MZ G LT 9 1ERA ETAPA VALLE SOL          ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":19.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0675893,"Longitud":-78.9797524},{"FechaCc":"15/06/2026","Doi":"71330570","Nombre":"JACOBO MOYA YESICA GIOVANI                                                                          ","Descripcion":"VALLE SOL LLETAPA MZT LT01                                            ","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":67.65,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0639366,"Longitud":-78.9791904},{"FechaCc":"15/06/2026","Doi":"72478161","Nombre":"BURGOS CASTILLO, LILY MILAGRITOS                                                                    ","Descripcion":"MZ A' LT 01 (BOTICA M&N) 3RA ETAPA VALLE SOL","Zona":"VALLE SOL - VICTOR RAUL - PORVENIR","Total":86.25,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0640123,"Longitud":-78.9766392},{"FechaCc":"15/06/2026","Doi":"72971021","Nombre":"ZARATE AGUSTIN, ASUCENA                                                                             ","Descripcion":"Av.Revolucion 2171 porvenir","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":300.6,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0702645,"Longitud":-78.9900865},{"FechaCc":"15/06/2026","Doi":"73066590","Nombre":"ANTICONA GONZALES CHRISTIAN                                                                         ","Descripcion":"MCDO. MIGUEL GRAU  PTO. #   124  EL PORVENIR","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":36.69,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"75880975","Nombre":"CARLOS RODRIGUEZ, MARLENI LUZVENI                                                                   ","Descripcion":"MERCADO MIGUEL GRAU PUESTO B 8 EL PORVENIR","Zona":"PORVENIR - MIGUEL GRAU 1 - MCDO VICTORIA","Total":35.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0},{"FechaCc":"15/06/2026","Doi":"76864380","Nombre":"VARAS SANCHEZ VECELICIA                                                                             ","Descripcion":"SAN JORGE # 460 EL PORVENIR (ESPALDA IGLESIA MORMONES )               ","Zona":"PORVENIR MIGUEL GRAU 2 - MCDO VICTORIA","Total":14.7,"Distribucion":"Dismar[1]-Lider[0]","Latitud":0.0,"Longitud":0.0}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+                          attribution:'OpenStreetMap',
+                          maxZoom:19
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+
+                          const fs=num >= 100 ? 7 : (num >= 10 ? 8 : 10);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="26" height="26" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg">' +
+                                 '<circle cx="13" cy="13" r="11" fill="' + color + '" stroke="#fff" stroke-width="2"/>' +
+                                 '<text x="13" y="13" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="' + fs + '" font-family="Segoe UI" font-weight="700">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[26,26],
+                            iconAnchor:[13,13]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const palabras=nombre.split(' ');
+                          const l1=palabras.slice(0,2).join(' ');
+                          const l2=palabras.slice(2).join(' ');
+                          const distrib=distribucion ? '<br><span style="color:#94e4b0;font-size:10px">' + distribucion + '</span>' : '';
+                          const totalHtml = total ? '<br><span style="color:#fbbf24;font-size:10px;font-weight:700">S/ ' + total.toFixed(2) + '</span>' : '';
+                          const tooltipHtml = '<span style="color:#fbbf24;font-weight:700">' + num + '</span> ' + (l2 ? '<b>' + l1 + '</b><br>' + l2 + distrib + totalHtml : '<b>' + l1 + '</b>' + distrib + totalHtml);
+
+                          marker.bindTooltip(tooltipHtml,{
+                            permanent:false,
+                            direction:'top',
+                            offset:[0,-14],
+                            className:'leaflet-tooltip-custom'
+                          });
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        // 🔹 CORRECCIÓN: El total de la cabecera también se basa en datosTodos
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+
+                        const zonaLabel = zonasUnicas.length === 1 ? ('Zona ' + zonasUnicas[0]) : (zonasUnicas.length + ' zonas');
+                        document.getElementById('titulo').textContent='Mapa ' + zonaLabel;
+                        document.getElementById('inf').textContent=datosMapa.length + ' puntos en mapa · ' + datosTodos.length + ' registros en consulta';
+                        document.getElementById('tot').textContent='Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        function generarTablaDetalleTodos(datosTodos){
+                          const hoy=new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+                          document.getElementById('det-subtitulo').textContent='Generado ' + hoy + ' · ' + datosTodos.length + ' registros en consulta';
+
+                          const contenedor=document.getElementById('det-contenido');
+                          contenedor.innerHTML='';
+
+                          const datosOrdenados = datosTodos.map((p,idx)=>({
+                            Zona: p.Zona || 'SIN ZONA',
+                            Nombre: p.Nombre || '',
+                            Descripcion: p.Descripcion || '',
+                            Distribucion: p.Distribucion || '',
+                            Total: Number(p.Total || 0),
+                            Latitud: Number(p.Latitud || 0),
+                            Longitud: Number(p.Longitud || 0),
+                            num: idx + 1,
+                            TieneGeo: Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0
+                          }));
+
+                          const zonasTodos=[...new Set(datosOrdenados.map(p => p.Zona))].sort();
+                          
+                          // 🔹 CORRECCIÓN: Este es el total del pie de tabla
+                          const totalGeneral = datosOrdenados.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                          document.getElementById('det-total-general').textContent='TOTAL GENERAL S/ ' + totalGeneral.toFixed(2);
+
+                          zonasTodos.forEach(zona=>{
+                            const puntosZona = datosOrdenados.filter(p => p.Zona === zona);
+                            const subtotalZona = puntosZona.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                            const color = colorPorZona[zona] || '#94a3b8';
+
+                            const header=document.createElement('div');
+                            header.className='det-zona-header';
+                            header.innerHTML =
+                              '<div class="det-zona-dot" style="background:' + color + '"></div>' +
+                              '<span>' + zona + '</span>' +
+                              '<span style="margin-left:auto;color:#64748b;font-weight:400">' + puntosZona.length + ' registros</span>';
+                            contenedor.appendChild(header);
+
+                            const tabla=document.createElement('table');
+                            tabla.className='det-table';
+                            tabla.innerHTML =
+                              '<thead>' +
+                              '<tr>' +
+                              '<th class="col-num">#</th>' +
+                              '<th class="col-geo">Geo</th>' +
+                              '<th>Nombre</th>' +
+                              '<th>Dirección</th>' +
+                              '<th class="col-dist">Distribución</th>' +
+                              '<th class="col-total">Total S/</th>' +
+                              '</tr>' +
+                              '</thead>';
+
+                            const tbody=document.createElement('tbody');
+
+                            puntosZona.forEach(p=>{
+                              const tr=document.createElement('tr');
+                              // 🔹 CORRECCIÓN: Usamos ✔ y ✖ aquí también
+                              tr.innerHTML =
+                                '<td class="det-num col-num">' + p.num + '</td>' +
+                                '<td class="col-geo ' + (p.TieneGeo ? 'det-geo-si' : 'det-geo-no') + '">' + (p.TieneGeo ? '✔' : '✖') + '</td>' +
+                                '<td>' + p.Nombre + '</td>' +
+                                '<td>' + p.Descripcion + '</td>' +
+                                '<td class="col-dist">' + p.Distribucion + '</td>' +
+                                '<td class="col-total">' + p.Total.toFixed(2) + '</td>';
+                              tbody.appendChild(tr);
+                            });
+
+                            const trSub=document.createElement('tr');
+                            trSub.innerHTML =
+                              '<td colspan="5" class="det-total-zona">Subtotal ' + zona + '</td>' +
+                              '<td class="det-total-zona">S/ ' + subtotalZona.toFixed(2) + '</td>';
+                            tbody.appendChild(trSub);
+
+                            tabla.appendChild(tbody);
+                            contenedor.appendChild(tabla);
+                          });
+                        }
+
+                        generarTablaDetalleTodos(datosTodos);
+                        </script>
+                        </body>
+                        </html>

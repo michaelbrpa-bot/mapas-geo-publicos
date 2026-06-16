@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                          *{margin:0;padding:0;box-sizing:border-box;}
+                          body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;}
+                          #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+                          #cab h2{font-size:14px;font-weight:700;color:#1e293b;flex:1;}
+                          #inf{font-size:11px;color:#64748b;}
+                          #tot{font-size:11px;color:#16a34a;font-weight:700;}
+                          #mapa{flex:1;}
+                          .leaflet-tooltip-custom{background:rgba(15,23,42,.88);color:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;font-size:11px;line-height:1.4;max-width:180px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+                          .leaflet-tooltip-custom::before{display:none;}
+                          .popup-content{font-size:12px;line-height:1.6;min-width:160px;}
+                          .popup-content strong{font-size:13px;color:#1e293b;}
+                          .popup-zona{color:#3b82f6;font-weight:600;}
+                          .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        <div id='cab'>
+                          <span style='font-size:16px'>📍</span>
+                          <h2 id='titulo'>Mapa georreferenciado</h2>
+                          <span id='inf'></span>
+                          <span id='tot'></span>
+                        </div>
+                        <div id='mapa'></div>
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datos=[{"FechaCc":"15/06/2026","Doi":"10179419870","Nombre":"ALFARO DE RODRIGUEZ AZUCENA                                                                         ","Descripcion":"LOS ANGELES 564 EL PORVENIR                                           ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":70.35,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0748245,"Longitud":-78.9996596},{"FechaCc":"15/06/2026","Doi":"10179514295","Nombre":"PICHON DE CASTRO MARCELA                                                                            ","Descripcion":"LOS ANGELES #899 - EL PORVENIR                                        ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":189.23,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0712934,"Longitud":-78.99843},{"FechaCc":"15/06/2026","Doi":"10180764726","Nombre":"BALTODANO PRADO MERCEDES SABINA                                                                     ","Descripcion":"ASENCIO VERGARA 303 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":154.5,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0735092,"Longitud":-78.9991654},{"FechaCc":"15/06/2026","Doi":"10181515193","Nombre":"GUTIERREZ LOZANO FLOR MARIA                                                                         ","Descripcion":"RIVAGUERO 1230 RÍO SECO - EL PORVENIR                                 ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":38.52,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0695096,"Longitud":-78.9987769},{"FechaCc":"15/06/2026","Doi":"17940025","Nombre":"GLORIA MAGDALENA ANTICONA RODRIGUEZ                                                                 ","Descripcion":"ANDRES CASTELLO293 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":121.3,"Distribucion":"Dismar[0]-Lider[1]","Latitud":-8.0702972,"Longitud":-78.998012},{"FechaCc":"15/06/2026","Doi":"17946986","Nombre":"AGUILAR ZAVALETA, MARIA EDUSBINDA                                                                   ","Descripcion":"LEÓNIDAS YEROVI  249 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":35.4,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0762856,"Longitud":-79.0014879},{"FechaCc":"15/06/2026","Doi":"17957136","Nombre":"ZAVALETA VARAS DOMINGO                                                                              ","Descripcion":"CALLE JOSÉ DE LA RIVA AGÜERO 560 EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":53.6,"Distribucion":"Dismar[0]-Lider[1]","Latitud":-8.0748143,"Longitud":-78.9996634},{"FechaCc":"15/06/2026","Doi":"18078022","Nombre":"CABRERA POLO MERCEDES                                                                               ","Descripcion":"TOMAS MOSCOSO 1219                                                    ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":173.0,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0781083,"Longitud":-79.0011005},{"FechaCc":"15/06/2026","Doi":"18078508","Nombre":"IZQUIERDO PIÑA, CELESTE  NIEVES                                                                     ","Descripcion":"MERCADO VICTOR LARCO PUESTO 82_83 EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0787784,"Longitud":-79.0012756},{"FechaCc":"15/06/2026","Doi":"18192340","Nombre":"LLAJARUNA REYES, FRANCISCA ANGELITA                                                                 ","Descripcion":"LOS HEROES 106 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":167.93,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0743577,"Longitud":-79.0028598},{"FechaCc":"15/06/2026","Doi":"18220714","Nombre":"GOMEZ JUAREZ OLGA MARIBEL                                                                           ","Descripcion":"ESQ HIPÓLITO UNANUE TOMAS MOSCOSO 1101  RIO SECO                      ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":74.58,"Distribucion":"Dismar[0]-Lider[1]","Latitud":-8.0783167,"Longitud":-79.0027622},{"FechaCc":"15/06/2026","Doi":"41759794","Nombre":"MENDEZ MENDEZ NORMA GRIMANEZA                                                                       ","Descripcion":"CALLE LOS ÁNGELES 220 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":187.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0782426,"Longitud":-79.0008832},{"FechaCc":"15/06/2026","Doi":"44507997","Nombre":"ALVINCO GAVIDIA, ELKY YENI                                                                          ","Descripcion":"PSJE SAN LUIS 178","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":85.0,"Distribucion":"Dismar[0]-Lider[1]","Latitud":-8.0729753,"Longitud":-79.0016946},{"FechaCc":"15/06/2026","Doi":"45272851","Nombre":"ALAYO SEVILLA, WENDE IVON                                                                           ","Descripcion":"LOS ANGELES 1202 EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":371.94,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0682324,"Longitud":-78.9972048},{"FechaCc":"15/06/2026","Doi":"47355673","Nombre":"YULY VANESSA GONZALEZ BENITES                                                                       ","Descripcion":"LOSANGELES1020SECTORLAUNIONRIOSECOELPORVENIRELPORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":181.29,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0699061,"Longitud":-78.9977532},{"FechaCc":"15/06/2026","Doi":"48660173","Nombre":"ZAVALETA GIRON MARTHA                                                                               ","Descripcion":"AV. SANCHEZ CARRION LOS LIBERTADORES  MZ Ñ LT.  2                     ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":76.37,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0647557,"Longitud":-78.9950323},{"FechaCc":"15/06/2026","Doi":"70672689","Nombre":"PUMA VITE, PIEERS  ANDERSON                                                                         ","Descripcion":"TOMÁS MOSCOSO 223","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":35.64,"Distribucion":"Dismar[1]-Lider[1]","Latitud":-8.0767565,"Longitud":-79.0024443},{"FechaCc":"15/06/2026","Doi":"72580716","Nombre":"GONZALES ZAVALETA YORLIN DARLIN                                                                     ","Descripcion":"CALLE LOS ÁNGELES 220  PORVENIR                                       ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":22.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0782756,"Longitud":-79.0008747},{"FechaCc":"15/06/2026","Doi":"73432844","Nombre":"ARANDA GARCIA LIS TALIA                                                                             ","Descripcion":"ESQ. ORELLANA  ANGELES 1257","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Latitud":-8.0785207,"Longitud":-79.0008312},{"FechaCc":"15/06/2026","Doi":"80259304","Nombre":"LIZARRAGA ALVAREZ ELENA                                                                             ","Descripcion":"CALLE HIPÓLITO HUNANUE #896 RÍO SECO - EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":116.19,"Distribucion":"Dismar[0]-Lider[2]","Latitud":-8.0718006,"Longitud":-79.0007531}];
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(mapa);
+                        const zonasUnicas=[...new Set(datos.map(p=>p.Zona))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=>colorPorZona[z]=PALETA[i%PALETA.length]);
+                        let totalGeneral=0;
+                        const bounds=[];
+                        datos.forEach((p,idx)=>{
+                          totalGeneral+=p.Total;
+                          const num=idx+1;
+                          const color=colorPorZona[p.Zona]||'#3b82f6';
+                          const fs=num>=100?7:num>=10?8:10;
+                          const icon=L.divIcon({className:'',html:`<svg width='26' height='26' viewBox='0 0 26 26'><circle cx='13' cy='13' r='11' fill='${color}' stroke='#fff' stroke-width='2'/><text x='13' y='13' text-anchor='middle' dominant-baseline='central' fill='#fff' font-size='${fs}' font-family='Segoe UI' font-weight='700'>${num}</text></svg>`,iconSize:[26,26],iconAnchor:[13,13]});
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+                          const palabras=p.Nombre.trim().split(/\s+/);
+                          const l1=palabras.slice(0,2).join(' ');
+                          const l2=palabras.slice(2).join(' ');
+                          const distrib=p.Distribucion?`<br><span style='color:#94e4b0;font-size:10px'>${p.Distribucion}</span>`:'';
+                          const total=p.Total?`<br><span style='color:#fbbf24;font-size:10px;font-weight:700'>S/ ${p.Total.toFixed(2)}</span>`:'';
+                          marker.bindTooltip(`<span style='color:#fbbf24;font-weight:700'>#${num}</span> `+(l2?`<b>${l1}</b><br>${l2}${distrib}${total}`:`<b>${l1}</b>${distrib}${total}`),{permanent:false,direction:'top',offset:[0,-14],className:'leaflet-tooltip-custom'});
+                          marker.bindPopup(`<div class='popup-content'><strong>#${num} — ${p.Nombre}</strong><br><span class='popup-zona'>📌 ${p.Zona}</span><br>📋 ${p.Descripcion}<br>🚚 ${p.Distribucion}<br><span class='popup-total'>💰 S/ ${p.Total.toFixed(2)}</span></div>`,{maxWidth:260});
+                          marker.addTo(mapa);
+                        });
+                        if(bounds.length>0) mapa.fitBounds(bounds,{padding:[30,30]});
+                        const zonaLabel=zonasUnicas.length===1?`Zona: ${zonasUnicas[0]}`:`${zonasUnicas.length} zonas`;
+                        document.getElementById('titulo').textContent=`Mapa — ${zonaLabel}`;
+                        document.getElementById('inf').textContent=`📍 ${datos.length} puntos`;
+                        document.getElementById('tot').textContent=`Total: S/ ${totalGeneral.toFixed(2)}`;
+                        </script>
+                        </body>
+                        </html>

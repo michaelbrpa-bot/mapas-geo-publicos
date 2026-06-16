@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+                        #cab h2{font-size:14px;font-weight:700;color:#1e293b;flex:1;}
+                        #info-vehiculo{background:#e2e8f0;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:11px;color:#16a34a;font-weight:700;}
+                        #mapa{height:90vh;}
+                        .leaflet-tooltip-custom{background:rgba(15,23,42,.88);color:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;font-size:11px;line-height:1.4;max-width:180px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+                        .leaflet-tooltip-custom:before{display:none;}
+                        .popup-content{font-size:12px;line-height:1.6;min-width:160px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        <div id='cab'>
+                          <span style='font-size:16px;'>Mapa</span>
+                          <h2 id='titulo'>Mapa georreferenciado</h2>
+                          <span id='info-vehiculo'></span>
+                          <span id='inf'></span>
+                          <span id='tot'></span>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"15/06/2026","Doi":"17874009","Nombre":"AREDO OLIVARES, NICOLAS ENRIQUE                                                                     ","Descripcion":"MCD INDOAMERICA PTO 25 STO DOMINGUITO","Zona":"MCDO SANTO DOMINGUITO","Total":55.2,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1148083,"Longitud":-79.007086,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17959071","Nombre":"JULIA JULCA SOTO                                                                                    ","Descripcion":"PTO 491 MDO SANTO DGTO.PTO COMIDA.","Zona":"MCDO SANTO DOMINGUITO","Total":34.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1144442,"Longitud":-79.0077967,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18106516","Nombre":"NAMOC AMAYA MARIA JUANA                                                                             ","Descripcion":"MERCADO SANTO DOMINGO PSTO 187                                        ","Zona":"MCDO SANTO DOMINGUITO","Total":53.1,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1138116,"Longitud":-79.0075757,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"20604317607","Nombre":"BUSINESS SMART CENTER E.I.R.L.                                                                      ","Descripcion":"CAL. BACILIO PACHECO NRO. 520 URB. EL BOSQUE                          ","Zona":"MCDO SANTO DOMINGUITO","Total":292.65,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1138308,"Longitud":-79.0076143,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"27386112","Nombre":"MARTINEZ GUEVARA GRACIELA                                                                           ","Descripcion":"MERCADO SANTO DOMINGUITO PSTO 128-B","Zona":"MCDO SANTO DOMINGUITO","Total":60.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1137951,"Longitud":-79.0075279,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"40236587","Nombre":"AGUSTIN SANGAY LUCY                                                                                 ","Descripcion":" MCD.INDOAMERICA PTO 304                                              ","Zona":"MCDO SANTO DOMINGUITO","Total":130.8,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1137112,"Longitud":-79.0076927,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"71559573","Nombre":"ROMERO NOLASCO ROSA JERALDIN                                                                        ","Descripcion":"PTO 691 PLATAFORMA MDO STO DOMINGUITO   ","Zona":"MCDO SANTO DOMINGUITO","Total":169.68,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.113995,"Longitud":-79.0072033,"Placa":null,"Conductor":null}];
+                        const datosTodos = [{"FechaCc":"15/06/2026","Doi":"05397975","Nombre":"RIOS FLORES VDA DE GUERRA, YOLANDA                                                                  ","Descripcion":"PSJE JORDAN 202 - ESPERANZA BAJA","Zona":"MERCADO NAZARET - JERUSALEN","Total":20.64,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"10179768858","Nombre":"CASTILLO GUERRA ABRAHAM                                                                             ","Descripcion":"MCD NAZARETH PTO 163 ESPERANZA                                        ","Zona":"MERCADO NAZARET - JERUSALEN","Total":581.26,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"10181451004","Nombre":"OLIVA ALVA. HAYDEE IRIS                                                                             ","Descripcion":"CAL. SAN JOSE NRO. 210 SEC.JERUSALEM","Zona":"MERCADO NAZARET - JERUSALEN","Total":146.45,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"10407835463","Nombre":"MENDOZA CARDENAS, CARLOS                                                                            ","Descripcion":"MERCADO NAZARETH PSJE JOSE FILA A ABARROTES)","Zona":"MERCADO NAZARET - JERUSALEN","Total":82.95,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17834178","Nombre":"GUERRA CALDERON ROGER SANTOS                                                                        ","Descripcion":"MDO NAZARETH PTO 111LA ESPERANZA                                      ","Zona":"MERCADO NAZARET - JERUSALEN","Total":18.6,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17874009","Nombre":"AREDO OLIVARES, NICOLAS ENRIQUE                                                                     ","Descripcion":"MCD INDOAMERICA PTO 25 STO DOMINGUITO","Zona":"MCDO SANTO DOMINGUITO","Total":55.2,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1148083,"Longitud":-79.007086,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17900813","Nombre":"PAREDES VASQUEZ FIDEL                                                                               ","Descripcion":"PTO680PLATAFORMAABARROTESTRUJILLO","Zona":"MCDO SANTO DOMINGUITO","Total":564.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17959071","Nombre":"JULIA JULCA SOTO                                                                                    ","Descripcion":"PTO 491 MDO SANTO DGTO.PTO COMIDA.","Zona":"MCDO SANTO DOMINGUITO","Total":34.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1144442,"Longitud":-79.0077967,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"17982072","Nombre":"GARCIA DE PAREDES, MARIA  MARTHA                                                                    ","Descripcion":"PSTO 194 MERCADO NAZARETH","Zona":"MERCADO NAZARET - JERUSALEN","Total":66.8,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18059346","Nombre":"VARGAS PICHON, JOSE ADRIANO                                                                         ","Descripcion":"MERCADO SANTO DOMINGO PLATAFORMA PTO 632 (X LA COCHERA)","Zona":"MCDO SANTO DOMINGUITO","Total":107.2,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18080758","Nombre":"CALDERON OLIVAREZ SOFIA                                                                             ","Descripcion":"PJE. SAN JOSE, FILA C- MCDO NAZARETH                                  ","Zona":"MERCADO NAZARET - JERUSALEN","Total":18.7,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18088777","Nombre":"FLORES ALVITES INOCENTA                                                                             ","Descripcion":"MERCADO NAZARETH 158                                                  ","Zona":"MERCADO NAZARET - JERUSALEN","Total":21.6,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18098811","Nombre":"AVALOS ZAVALETA LUIS                                                                                ","Descripcion":"MCDO INDOAMERICANO PTO 87 STO DOMINGUITOTRUJILLOTRUJILLO","Zona":"MCDO SANTO DOMINGUITO","Total":105.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18100324","Nombre":"FERNANDEZ TABOADA LELIS                                                                             ","Descripcion":"PASAJESANJOSEFILAAESPARANZABA","Zona":"MERCADO NAZARET - JERUSALEN","Total":234.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18106516","Nombre":"NAMOC AMAYA MARIA JUANA                                                                             ","Descripcion":"MERCADO SANTO DOMINGO PSTO 187                                        ","Zona":"MCDO SANTO DOMINGUITO","Total":53.1,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1138116,"Longitud":-79.0075757,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18112771","Nombre":"MENDEZ CASTILLO DE MARCELO MARTHA YOLANDA                                                           ","Descripcion":"PLATAFORMA 650 MCDO STO DOMINGO         ","Zona":"MCDO SANTO DOMINGUITO","Total":612.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18124031","Nombre":"SERRATO  VENTURA, NELLY  RENEE                                                                      ","Descripcion":"PSJE SAN JOSE 398-A PARADA MCDO NAZARETH","Zona":"MERCADO NAZARET - JERUSALEN","Total":140.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18124551","Nombre":"FLORES LOPEZ RAQUEL                                                                                 ","Descripcion":"MCDO NAZARETH PSJ. LOS CEDROS 145                                     ","Zona":"MERCADO NAZARET - JERUSALEN","Total":5.1,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18192071","Nombre":"VEGA MONTENEGRO KAREN RUT                                                                           ","Descripcion":"MERCADO NAZARET PTO 13 ( ALADO SEÑOR ELMER )                          ","Zona":"MERCADO NAZARET - JERUSALEN","Total":280.8,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18204372","Nombre":"GAMBOA CUEVA, MARITZA                                                                               ","Descripcion":"MERCADO NAZARET PUESTO 162","Zona":"MERCADO NAZARET - JERUSALEN","Total":36.21,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18225006","Nombre":"FLORES REYES IRIS MARITA                                                                            ","Descripcion":"MDONAZARETHPTO256LAESPERANZA","Zona":"MERCADO NAZARET - JERUSALEN","Total":20.98,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"18227290","Nombre":"HUAMAN CABEL, JENY JANETTE                                                                          ","Descripcion":"JERUSALÉN 299A (BODEGA MI FAVORITA) LA ESPERANZA BAJA","Zona":"MERCADO NAZARET - JERUSALEN","Total":35.2,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"20602357385","Nombre":"COMERCIAL HENRY JUNIOR E.I.R.L.                                                                     ","Descripcion":"MDONAZARETH PTO142LA ESPERANZA                                        ","Zona":"MERCADO NAZARET - JERUSALEN","Total":825.65,"Distribucion":"DISMAR[1]-LIDER[2]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"20604317607","Nombre":"BUSINESS SMART CENTER E.I.R.L.                                                                      ","Descripcion":"CAL. BACILIO PACHECO NRO. 520 URB. EL BOSQUE                          ","Zona":"MCDO SANTO DOMINGUITO","Total":292.65,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1138308,"Longitud":-79.0076143,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"20611021187","Nombre":"INVERSIONES JH & MA S.A.C.                                                                          ","Descripcion":"AV CARLOS WIESSE PTO 699 PLATAFORMA MDO ","Zona":"MCDO SANTO DOMINGUITO","Total":923.4,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"27386112","Nombre":"MARTINEZ GUEVARA GRACIELA                                                                           ","Descripcion":"MERCADO SANTO DOMINGUITO PSTO 128-B","Zona":"MCDO SANTO DOMINGUITO","Total":60.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1137951,"Longitud":-79.0075279,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"40236587","Nombre":"AGUSTIN SANGAY LUCY                                                                                 ","Descripcion":" MCD.INDOAMERICA PTO 304                                              ","Zona":"MCDO SANTO DOMINGUITO","Total":130.8,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1137112,"Longitud":-79.0076927,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"40779272","Nombre":"ZULY CHUP CASTILLO                                                                                  ","Descripcion":"MERCADO NAZARET PSTO 205ESPERANZA BAJA  ","Zona":"MERCADO NAZARET - JERUSALEN","Total":80.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"42075375","Nombre":"JAIME PEREZ VERA                                                                                    ","Descripcion":"PARADA SAN JOSE FILA A  ESPE.BAJA","Zona":"MERCADO NAZARET - JERUSALEN","Total":212.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"42378745","Nombre":"ORTEGA MENDEZ CARLOS WILLIAMS                                                                       ","Descripcion":"LOS CEDROS 306-A ESPERANZA BAJA                                       ","Zona":"MERCADO NAZARET - JERUSALEN","Total":211.69,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"42501344","Nombre":"RUBINA SANCHEZ DENISE MARITZA                                                                       ","Descripcion":"MERCADO SANTO DOMINGO PJE MIGUEL ANGEL G_18 (COMERCIAL DENISE)        ","Zona":"MCDO SANTO DOMINGUITO","Total":52.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"43188001","Nombre":"VELASQUEZ FLORES, VICTORIA  ELIZABETH                                                               ","Descripcion":"PUESTO 133 MERCADO NAZARETH LA ESPERANZA","Zona":"MERCADO NAZARET - JERUSALEN","Total":12.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"45541532","Nombre":"GOMEZ FERNANDEZ ERCY GERALDINE                                                                      ","Descripcion":"LOS CEDROS 404                                                        ","Zona":"MERCADO NAZARET - JERUSALEN","Total":380.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"71559573","Nombre":"ROMERO NOLASCO ROSA JERALDIN                                                                        ","Descripcion":"PTO 691 PLATAFORMA MDO STO DOMINGUITO   ","Zona":"MCDO SANTO DOMINGUITO","Total":169.68,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.113995,"Longitud":-79.0072033,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"77440239","Nombre":"AREVALO COTRINA ERIKA JHUDID                                                                        ","Descripcion":"LOS CEDROS 324-A   LA ESPERANZA BAJA    ","Zona":"MERCADO NAZARET - JERUSALEN","Total":1425.45,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null},{"FechaCc":"15/06/2026","Doi":"80182188","Nombre":"GUTIERREZ BALTAZAR MARCOS                                                                           ","Descripcion":"LOS CEDROS 384  PARADA ESP.BAJA","Zona":"MERCADO NAZARET - JERUSALEN","Total":43.8,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":null,"Conductor":null}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+                          attribution:'OpenStreetMap',
+                          maxZoom:19
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+
+                          const fs=num >= 100 ? 7 : (num >= 10 ? 8 : 10);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="26" height="26" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg">' +
+                                 '<circle cx="13" cy="13" r="11" fill="' + color + '" stroke="#fff" stroke-width="2"/>' +
+                                 '<text x="13" y="13" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="' + fs + '" font-family="Segoe UI" font-weight="700">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[26,26],
+                            iconAnchor:[13,13]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const palabras=nombre.split(' ');
+                          const l1=palabras.slice(0,2).join(' ');
+                          const l2=palabras.slice(2).join(' ');
+                          const distrib=distribucion ? '<br><span style="color:#94e4b0;font-size:10px">' + distribucion + '</span>' : '';
+                          const totalHtml = total ? '<br><span style="color:#fbbf24;font-size:10px;font-weight:700">S/ ' + total.toFixed(2) + '</span>' : '';
+                          const tooltipHtml = '<span style="color:#fbbf24;font-weight:700">' + num + '</span> ' + (l2 ? '<b>' + l1 + '</b><br>' + l2 + distrib + totalHtml : '<b>' + l1 + '</b>' + distrib + totalHtml);
+
+                          marker.bindTooltip(tooltipHtml,{
+                            permanent:false,
+                            direction:'top',
+                            offset:[0,-14],
+                            className:'leaflet-tooltip-custom'
+                          });
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        // 🔹 NUEVO: Extraemos Placa y Conductor 
+                        let textoVehiculo = '';
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+                        }
+                        
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+
+                        const zonaLabel = zonasUnicas.length === 1 ? ('Zona ' + zonasUnicas[0]) : (zonasUnicas.length + ' zonas');
+                        document.getElementById('titulo').textContent='Mapa ' + zonaLabel;
+                        document.getElementById('inf').textContent=datosMapa.length + ' puntos en mapa · ' + datosTodos.length + ' registros en consulta';
+                        document.getElementById('tot').textContent='Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        </script>
+                        </body>
+                        </html>

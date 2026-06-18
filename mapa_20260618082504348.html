@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        
+                        /* 🔹 CORRECCIÓN MOBILE: Usamos 100dvh y overflow:hidden para que el mapa no empuje el pie fuera de la pantalla */
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+
+                       #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* 🔹 CORRECCIÓN ESTÉTICA Y MOBILE: Pie de página blanco, con flex-wrap y scroll si hay muchas zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Ruta:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"17/06/2026","Doi":"10470623182","Nombre":"OBANDO RUIZ, LIZ TERESA                                                                             ","Descripcion":"JR. JORGE CHAVEZ 1395","Zona":"HUAYCO 3","Total":97.47,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-6.5037486,"Longitud":-76.3654966,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"}];
+                        const datosTodos = [{"FechaCc":"17/06/2026","Doi":"00113689","Nombre":"ALBERCA  ROJAS, MARIBEL                                                                             ","Descripcion":"JR. MANCO INCA 530","Zona":"HUAYCO 1","Total":61.14,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"00504966","Nombre":"RAMOS LIMACHE ELIZABETH                                                                             ","Descripcion":"JR.VENCEDORES DE COMAINAS 176-HUAYCO","Zona":"HUAYCO 3","Total":15.18,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"00925003","Nombre":"SHAPIAMA REATEGUI, ISABEL                                                                           ","Descripcion":"JR. AMERICA # 331","Zona":"HUAYCO 1","Total":140.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"00954967","Nombre":"AREVALO  DE DIAZ , EDITH                                                                            ","Descripcion":"JR CUSCO 749","Zona":"HUAYCO 3","Total":62.16,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01064796","Nombre":"TORRES SAAVEDRA, BEATRIZ                                                                            ","Descripcion":"PSJ. SARGENTO LORES 191","Zona":"HUAYCO 1","Total":31.14,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01065939","Nombre":"DAVILA CARBAJAL, AGUSTINA                                                                           ","Descripcion":"JR. HUASCAR 522","Zona":"HUAYCO 2","Total":46.36,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01066547","Nombre":"GARCIA DEL AGUILA, ARTURO                                                                           ","Descripcion":"JR. JOSE OLAYA 521 - HUAYCO","Zona":"HUAYCO 1","Total":37.35,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01067008","Nombre":"ALVAREZ ALVAREZ, ROSA VICTORIA                                                                      ","Descripcion":"PSJ. 15 DE AGOSTO MZ. F LT. 10","Zona":"HUAYCO 3","Total":31.08,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01071226","Nombre":"ALAVA HIDALGO, ENITH JESUS                                                                          ","Descripcion":"JR. HUALLAGA NO. 813","Zona":"HUAYCO 3","Total":31.75,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01071239","Nombre":"FASANANDO  GONZALES, MARIA ANITA                                                                    ","Descripcion":"JR LUIS SANCHEZ 400 HUAYCO","Zona":"HUAYCO 3","Total":30.52,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01090547","Nombre":"PANDURO TENAZOA DORIS                                                                               ","Descripcion":"JR.1 DE ABRIL 374","Zona":"HUAYCO 2","Total":29.76,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01111934","Nombre":"PAREDES MACEDO, GUSTAVO                                                                             ","Descripcion":"JR. ANTONIO RAYMONDI-631","Zona":"HUAYCO 1","Total":54.91,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01117353","Nombre":"LOPEZ ALAVA, IRINA NATALY                                                                           ","Descripcion":"JR. HUALLAGA 815","Zona":"HUAYCO 3","Total":31.29,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01121041","Nombre":"SILVA SILVA, SADID                                                                                  ","Descripcion":"JR. MIRAFLORES 793","Zona":"HUAYCO 3","Total":15.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01148853","Nombre":"RODRIGUEZ RAMIREZ, LLANET                                                                           ","Descripcion":"JR. LAS PALMAS 255","Zona":"HUAYCO 2","Total":32.38,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01159818","Nombre":"DEL AGUILA VALERA, ALEX                                                                             ","Descripcion":"JR. HUALLAGA 546","Zona":"HUAYCO 3","Total":15.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01162353","Nombre":"BARDALES PINEDO, RUBY                                                                               ","Descripcion":"JR. PERU / JR. SAN MARTIN 386","Zona":"HUAYCO 2","Total":58.8,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"01163764","Nombre":"ALVA CACHIQUE, SIDUITH                                                                              ","Descripcion":"JR. CENEPA 434","Zona":"HUAYCO 1","Total":59.84,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10011089891","Nombre":"AMASIFUEN CACHIQUE MANUELA                                                                          ","Descripcion":"JR.SHAPAJA 279-HUAYCO","Zona":"HUAYCO 1","Total":46.56,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10011298325","Nombre":"USHIÑAHUA RAMIREZ, ROSA ALBINA                                                                      ","Descripcion":"SANTA MARIA  # 439","Zona":"HUAYCO 2","Total":160.55,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10229638187","Nombre":"RIOS PANCHANA ROSARIO DEL CARMEN                                                                    ","Descripcion":"1 DE ABRIL 657 - BANDA","Zona":"HUAYCO 2","Total":234.98,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10423922309","Nombre":"PANDURO TENAZOA, MARITA                                                                             ","Descripcion":"JR. SANTA MARIA 537","Zona":"HUAYCO 2","Total":38.65,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10428501026","Nombre":"TAYA PILLACA, JOEL CIRILO                                                                           ","Descripcion":"SANTA INÉS-419","Zona":"HUAYCO 1","Total":81.7,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10433980650","Nombre":"SANCHEZ GARCIA, CLEMENTE                                                                            ","Descripcion":"JR. RICARDO PALMA 780","Zona":"HUAYCO 1","Total":62.16,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10470623182","Nombre":"OBANDO RUIZ, LIZ TERESA                                                                             ","Descripcion":"JR. JORGE CHAVEZ 1395","Zona":"HUAYCO 3","Total":97.47,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-6.5037486,"Longitud":-76.3654966,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"10715024174","Nombre":"AGUILAR MORI, ALONSO                                                                                ","Descripcion":"MARTINES DE COMPAGÑON 484","Zona":"HUAYCO 1","Total":47.63,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"40294429","Nombre":"FLORES FUTHS, MURRIETA                                                                              ","Descripcion":"JR.JOSE SAAVEDRA /JR. HILO","Zona":"HUAYCO 3","Total":15.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"40427085","Nombre":"RODRIGUEZ AREVALO, ESTHER                                                                           ","Descripcion":"JR. JORGE CHAVEZ 685","Zona":"HUAYCO 1","Total":98.22,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"41034948","Nombre":"ACUÑA NEYRA, BEYBITH                                                                                ","Descripcion":"JR. LOS ANGELES Nº 459","Zona":"HUAYCO 1","Total":22.38,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"42115172","Nombre":"SANCHEZ SILVA, JESSICA                                                                              ","Descripcion":"SANTA INES-459","Zona":"HUAYCO 1","Total":80.29,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"44245312","Nombre":"RIVERA CORDOBA, VANESA                                                                              ","Descripcion":"JORGE CHAVEZ 453","Zona":"HUAYCO 1","Total":39.44,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"44649878","Nombre":"GONZALES LOMAS, HEISTEN                                                                             ","Descripcion":"JR TARAPOTO","Zona":"LAMAS 1","Total":78.93,"Distribucion":"DISMAR[2]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"44797176","Nombre":"AMASIFUEN FATAMA, IDA                                                                               ","Descripcion":"JR. PROLONGACION JORGUE CHAVEZ 424","Zona":"HUAYCO 3","Total":47.3,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"45228944","Nombre":"FLORES ABANTO, LOYDITH                                                                              ","Descripcion":"JR. YURIMAGUAS 628","Zona":"HUAYCO 2","Total":44.16,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"46133768","Nombre":"MONDRAGON POMIANO, BERTHA                                                                           ","Descripcion":"JR. PERU 173","Zona":"HUAYCO 2","Total":54.67,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"72169746","Nombre":"PACHAMORA RODRIGUEZ, CLEVER                                                                         ","Descripcion":"JUAN VARGAS 148","Zona":"HUAYCO 1","Total":88.99,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"72497344","Nombre":"RAMIREZ CASTILLO, SANDRO                                                                            ","Descripcion":"JR. MIRAFLORES 539","Zona":"HUAYCO 2","Total":50.29,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"73188626","Nombre":"SANDOVAL LOZANO, GRESIA HOLENCA                                                                     ","Descripcion":"LIBERTAD 116","Zona":"HUAYCO 1","Total":49.37,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"76803975","Nombre":"QUINTEROS ALIAGA, SHIRLEY                                                                           ","Descripcion":"RICARDO PALMA 686","Zona":"HUAYCO 1","Total":111.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"17/06/2026","Doi":"80460225","Nombre":"SORIA MARAYARI, MARIA DOLORES                                                                       ","Descripcion":"JR HUALLAGA 644","Zona":"HUAYCO 3","Total":15.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                                        // 🔹 SERVIDORES DE GOOGLE MAPS (Ultra rápidos)
+                                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                                          attribution:'Google Maps',
+                                          maxZoom:20
+                                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13); // Fuente más grande
+
+                                const icon=L.divIcon({
+                                  className:'',
+                                  html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                       '<!-- Sombra base -->' +
+                                       '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                       '<!-- Círculo principal -->' +
+                                       '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                       '<!-- Texto -->' +
+                                       '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                       '</svg>',
+                                  iconSize:[36,36],
+                                  iconAnchor:[18,20]
+                                });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

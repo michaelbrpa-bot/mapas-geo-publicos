@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        
+                        /* 🔹 CORRECCIÓN MOBILE: Usamos 100dvh y overflow:hidden para que el mapa no empuje el pie fuera de la pantalla */
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+
+                       #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* 🔹 CORRECCIÓN ESTÉTICA Y MOBILE: Pie de página blanco, con flex-wrap y scroll si hay muchas zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Ruta:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [];
+                        const datosTodos = [{"FechaCc":"17/06/2026","Doi":"01065010","Nombre":"TORRES INGA LOYDA                                                                                   ","Descripcion":"MERCADO 3 PTO.CYD-18/HUAYCO","Zona":"MERCADO HUAYCO","Total":28.15,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"01086930","Nombre":"PAREDES FLORES DE ISUIZA JUANITA                                                                    ","Descripcion":"JR. MERCADO 3 FILA J","Zona":"MERCADO HUAYCO","Total":54.3,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"01117605","Nombre":"ALVA PISCO, MARILU                                                                                  ","Descripcion":"PAB. Nº 1 FILA \"C\" PUESTO 14-15","Zona":"MERCADO HUAYCO","Total":37.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"01121070","Nombre":"AGUIRRE LIMAS, IMELDA                                                                               ","Descripcion":"MCDO HUAYCO PABELLON J PST. 27","Zona":"MERCADO HUAYCO","Total":37.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"01156299","Nombre":"MONTENEGRO HUACAL, MARIA ROSARIO                                                                    ","Descripcion":"JR. ANDRES AVELLINO C #4","Zona":"TARAPOTO MAYORISTAS","Total":4774.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"10008993837","Nombre":"CORREA ALVAREZ EUMENIA                                                                              ","Descripcion":"JR. ANDRES AVELINO CACERES S/N INTERIOR MCDO. N2 PSTO B11","Zona":"TARAPOTO MAYORISTAS","Total":84.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"10270402394","Nombre":"QUISPE ROJAS, JOSE ALEJANDRO                                                                        ","Descripcion":"JR. ABANCAY 524","Zona":"MERCADO HUAYCO","Total":88.1,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"10404466866","Nombre":"HEREDIA VELAYSOSA, BENITO                                                                           ","Descripcion":"JR. ABANCAY 514","Zona":"MERCADO HUAYCO","Total":171.39,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"10427799072","Nombre":"SANTILLAN  DE LA CRUZ , CARLOS                                                                      ","Descripcion":"PABELLON H PUESTO -01  (MERCADO HUYCO)","Zona":"MERCADO HUAYCO","Total":126.7,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"10754211429","Nombre":"BOCANEGRA RUIZ, YOANA SELENIA                                                                       ","Descripcion":"JR. ILO 169","Zona":"MERCADO HUAYCO","Total":32.7,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"20404342593","Nombre":"COMERCIAL EL SOL E.I.R.L.                                                                           ","Descripcion":"JR. ANTONIO RAYMONDI  Nº 397 - TARAPOTO","Zona":"TARAPOTO MAYORISTAS","Total":462.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"20613182226","Nombre":"PANDA PLAZA S.A.C.                                                                                  ","Descripcion":"AV. VIA DE EVITAMIENTO CUADRA 4 NRO. 0 (ESQUINA CON AV. MANCO INCA)","Zona":"HUAYCO 1","Total":947.85,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"44333875","Nombre":"ACUÑA NEYRA, JOHANA                                                                                 ","Descripcion":"PABELLON C FILA F PSTO 8- MCD. HUAYCO","Zona":"MERCADO HUAYCO","Total":37.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"44564105","Nombre":"ARAUJO RENGIFO, KELLY                                                                               ","Descripcion":"PTO. NRO 22 PAB. J - MERCADO HUAYCO","Zona":"MERCADO HUAYCO","Total":37.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"45350461","Nombre":"ÑONTOL ROJAS, SILVIA ISABEL                                                                         ","Descripcion":"JR. VENCEDORES DE COMAINAS NRO. 338 - HUAYCO","Zona":"MERCADO HUAYCO","Total":17.3,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"45894708","Nombre":"FLORES HUANCA, FELICITA                                                                             ","Descripcion":"JR HILO#176 - HUAYCO","Zona":"MERCADO HUAYCO","Total":107.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"47003665","Nombre":"ALARCON  RAMIREZ, INEIDA                                                                            ","Descripcion":"JR. VENCEDORES DE COMAINAS CDRA. 3","Zona":"TARAPOTO MAYORISTAS","Total":12.1,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"47353206","Nombre":"ALTAMIRANO DELGADO, LEYSI                                                                           ","Descripcion":"JR. HILO DR. 1 -MCD. HUAYCO","Zona":"MERCADO HUAYCO","Total":37.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"47459913","Nombre":"CARRILLO TUANAMA, ARCEMIO                                                                           ","Descripcion":"JR. ABANCAY 514","Zona":"MERCADO HUAYCO","Total":181.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"48196753","Nombre":"ALTAMIRANO DELGADO, ANEIDA                                                                          ","Descripcion":"JR. ILO FRENTE","Zona":"MERCADO HUAYCO","Total":42.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"17/06/2026","Doi":"76762068","Nombre":"VENTURA PRADO, ELMER                                                                                ","Descripcion":"JR. ABANCAY 508-MCDO. HUAYCO","Zona":"MERCADO HUAYCO","Total":130.85,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T7C839","Conductor":"AGAPITO SANGAMA, SINARAHUA"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                                        // 🔹 SERVIDORES DE GOOGLE MAPS (Ultra rápidos)
+                                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                                          attribution:'Google Maps',
+                                          maxZoom:20
+                                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13); // Fuente más grande
+
+                                const icon=L.divIcon({
+                                  className:'',
+                                  html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                       '<!-- Sombra base -->' +
+                                       '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                       '<!-- Círculo principal -->' +
+                                       '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                       '<!-- Texto -->' +
+                                       '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                       '</svg>',
+                                  iconSize:[36,36],
+                                  iconAnchor:[18,20]
+                                });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

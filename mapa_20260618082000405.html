@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        
+                        /* 🔹 CORRECCIÓN MOBILE: Usamos 100dvh y overflow:hidden para que el mapa no empuje el pie fuera de la pantalla */
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+
+                       #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* 🔹 CORRECCIÓN ESTÉTICA Y MOBILE: Pie de página blanco, con flex-wrap y scroll si hay muchas zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Ruta:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"17/06/2026","Doi":"05240464","Nombre":"AQUINO YARIHUAMAN, REINA  MARUJA                                                                    ","Descripcion":"MANUEL SEOANE 1115 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":122.64,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1370772,"Longitud":-79.0436931,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10178690065","Nombre":"MORALES ZAVALETA SEMIRAMIZ                                                                          ","Descripcion":"RAZURI 395  VISTA ALEGRE                ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":84.9,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1411592,"Longitud":-79.0487862,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10180944341","Nombre":"ANTON PEÑA DELIA                                                                                    ","Descripcion":"PASAJE MANU 184 INTENDENCIA.            ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":71.1,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.0980054,"Longitud":-79.0145306,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"17923112","Nombre":"VASQUEZ VEREAU, CARMEN  ELIZABETH                                                                   ","Descripcion":"MCDO. STA ROSA PTO. 26 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":137.53,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1370742,"Longitud":-79.0446425,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18038218","Nombre":"BOBADILLA MARTINEZ DE HORNA, MARTA  ISABEL                                                          ","Descripcion":"MANUEL SOANE 715 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":24.5,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1415749,"Longitud":-79.0476942,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18040101","Nombre":"VASQUEZ VEREAU LUIS ANTONIO                                                                         ","Descripcion":"MCDO VISTA ALEGRE PSTO # 27                                           ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":541.92,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1370741,"Longitud":-79.0446666,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18066977","Nombre":"POMA SUAREZ HILDA                                                                                   ","Descripcion":"MCD.STA.ROSA PTO 13 V.ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":206.88,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1366308,"Longitud":-79.0443635,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"20608823213","Nombre":"INVERSIONES ROMERITO E.I.R.L.                                                                       ","Descripcion":"MANCO CAPAC 753 .VISTA ALGRE            ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":271.75,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1364775,"Longitud":-79.0445258,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41359846","Nombre":"GUEVARA AGUILAR KENNY DAVID                                                                         ","Descripcion":"AV. EJERCITO 1084 INTENDENCIA","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":171.48,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.0985978,"Longitud":-79.0183745,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41544587","Nombre":"MONTERO JIMÉNEZ MARÍA SUSANA                                                                        ","Descripcion":"PTO A-374 MDO UNION                     ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":110.2,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1053275,"Longitud":-79.0213678,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41837191","Nombre":"PAREDES POLO ROBERT                                                                                 ","Descripcion":"MCDO UNION PTO 114 A MOLINO                                           ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":139.35,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1054176,"Longitud":-79.0214231,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"43042612","Nombre":"MARIN ROJAS SARITA                                                                                  ","Descripcion":"MERCADO UNION PTO 1050 C","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":701.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1054889,"Longitud":-79.0213922,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"44178735","Nombre":"CHAVEZ ABANTO GISELLA                                                                               ","Descripcion":"CALLE MANCO CAPAC 681 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":24.9,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1368632,"Longitud":-79.0448113,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"44281737","Nombre":"TITO JAUREGUI IVAN YAKOV                                                                            ","Descripcion":"PSJE SEOANE S N CON MANCO CAPAC (COSTADO MCDO)                        ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":119.05,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1372375,"Longitud":-79.0442557,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"73209493","Nombre":"ESPINOLA CARRERA NATALI                                                                             ","Descripcion":"CALLE CECILIO COX 400 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":44.07,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1372435,"Longitud":-79.0459032,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"74596658","Nombre":"ANACLETO VALDEZ HILDA MILAGROS                                                                      ","Descripcion":"MANCO CAPAC 808 VISTA ALEGRE            ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":112.2,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1358648,"Longitud":-79.0443062,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"77272080","Nombre":"CEDILLO LÓPEZ LISSET                                                                                ","Descripcion":"AV. SANTA 1030","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":140.84,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1004295,"Longitud":-79.0173655,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"}];
+                        const datosTodos = [{"FechaCc":"17/06/2026","Doi":"05240464","Nombre":"AQUINO YARIHUAMAN, REINA  MARUJA                                                                    ","Descripcion":"MANUEL SEOANE 1115 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":122.64,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1370772,"Longitud":-79.0436931,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10178603588","Nombre":"ALVARADO ZAVALETA OSCAR ARNALDO                                                                     ","Descripcion":"AV AMÉRICA NORTE 229 INTENDENCIA","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":32.37,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10178690065","Nombre":"MORALES ZAVALETA SEMIRAMIZ                                                                          ","Descripcion":"RAZURI 395  VISTA ALEGRE                ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":84.9,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1411592,"Longitud":-79.0487862,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10179121498","Nombre":"DE LA CRUZ VILLACORTA ROSA MARIA                                                                    ","Descripcion":"29 DE DICIEMBRE 131  V ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":38.18,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10179251189","Nombre":"BENITES CERNA JOSE                                                                                  ","Descripcion":"AV. ESPAÑA NRO. 1401 CERCADO","Zona":"PALERMO - ARANJUEZ","Total":389.5,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10180944341","Nombre":"ANTON PEÑA DELIA                                                                                    ","Descripcion":"PASAJE MANU 184 INTENDENCIA.            ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":71.1,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.0980054,"Longitud":-79.0145306,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10404402639","Nombre":"CASTILLO MARIN WILLIAM ORLANDO                                                                      ","Descripcion":"JR MIGUEL GRAU200 INT 1 MCDO S ROSA B AIRES","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":89.58,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"10419040962","Nombre":"VERGARAY GARCIA MARIELENA EDITA                                                                     ","Descripcion":"MCDSTAROSAPTO59BNSAIRES","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":177.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"17809246","Nombre":"MANTILLA ALVARADO PATRICIA                                                                          ","Descripcion":"AV EJERCITO 1074                        ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":46.4,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"17923112","Nombre":"VASQUEZ VEREAU, CARMEN  ELIZABETH                                                                   ","Descripcion":"MCDO. STA ROSA PTO. 26 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":137.53,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1370742,"Longitud":-79.0446425,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18033729","Nombre":"AGUILAR ARTEAGA ANGELICA                                                                            ","Descripcion":"PSTO 20 MCDO SANTA ROSA BS AIRES NORTE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":49.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18038218","Nombre":"BOBADILLA MARTINEZ DE HORNA, MARTA  ISABEL                                                          ","Descripcion":"MANUEL SOANE 715 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":24.5,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1415749,"Longitud":-79.0476942,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18040101","Nombre":"VASQUEZ VEREAU LUIS ANTONIO                                                                         ","Descripcion":"MCDO VISTA ALEGRE PSTO # 27                                           ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":541.92,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1370741,"Longitud":-79.0446666,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18040531","Nombre":"CASTILLO CRISOLOGO ANTONIO                                                                          ","Descripcion":"MCDO STA ROSA PTO 26 BNOS AIRES","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":26.55,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18042098","Nombre":"HUAMAN URQUIZA JOSE                                                                                 ","Descripcion":"MCD.V.ALEGRE PTO 9192","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":196.2,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18066977","Nombre":"POMA SUAREZ HILDA                                                                                   ","Descripcion":"MCD.STA.ROSA PTO 13 V.ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":206.88,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1366308,"Longitud":-79.0443635,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18153109","Nombre":"VALENTIN AVALOS ROSA MARIA                                                                          ","Descripcion":"PSJ. SEOANE 1063 - VISTA ALEGRE (AL COST","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":39.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"18168396","Nombre":"RONCAL ALVARADO JENNY                                                                               ","Descripcion":"JR.UNION 1213","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":31.2,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"19036892","Nombre":"GUZMAN ALFARO JORGE                                                                                 ","Descripcion":"MCD.STA.ROSA PTO 85 A.ALEGRE                                          ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":132.0,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"19066540","Nombre":"ARTEAGA GARCIA MIGUEL                                                                               ","Descripcion":"MERCADO SANTA ROSA PUESTO 11 BUENOS AIRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":25.5,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"20608823213","Nombre":"INVERSIONES ROMERITO E.I.R.L.                                                                       ","Descripcion":"MANCO CAPAC 753 .VISTA ALGRE            ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":271.75,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1364775,"Longitud":-79.0445258,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41359846","Nombre":"GUEVARA AGUILAR KENNY DAVID                                                                         ","Descripcion":"AV. EJERCITO 1084 INTENDENCIA","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":171.48,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.0985978,"Longitud":-79.0183745,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41544587","Nombre":"MONTERO JIMÉNEZ MARÍA SUSANA                                                                        ","Descripcion":"PTO A-374 MDO UNION                     ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":110.2,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1053275,"Longitud":-79.0213678,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"41837191","Nombre":"PAREDES POLO ROBERT                                                                                 ","Descripcion":"MCDO UNION PTO 114 A MOLINO                                           ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":139.35,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1054176,"Longitud":-79.0214231,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"43042612","Nombre":"MARIN ROJAS SARITA                                                                                  ","Descripcion":"MERCADO UNION PTO 1050 C","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":701.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-8.1054889,"Longitud":-79.0213922,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"44178735","Nombre":"CHAVEZ ABANTO GISELLA                                                                               ","Descripcion":"CALLE MANCO CAPAC 681 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":24.9,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1368632,"Longitud":-79.0448113,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"44281737","Nombre":"TITO JAUREGUI IVAN YAKOV                                                                            ","Descripcion":"PSJE SEOANE S N CON MANCO CAPAC (COSTADO MCDO)                        ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":119.05,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1372375,"Longitud":-79.0442557,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"44857118","Nombre":"PAIVA VELASQUEZ JOANA                                                                               ","Descripcion":"PASAJE MANCO CAPAC 380 VISTA ALEGRE                                   ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":87.6,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"47982787","Nombre":"BURCKHARDT VARGAS BRYAN JEAN LUY                                                                    ","Descripcion":"NICOLAS DE PIEROLA 207 BUENOS AIRES NORTE","Zona":"OFICINA  [00 ]","Total":23.3,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"73209493","Nombre":"ESPINOLA CARRERA NATALI                                                                             ","Descripcion":"CALLE CECILIO COX 400 VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":44.07,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1372435,"Longitud":-79.0459032,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"74047244","Nombre":"VERGARAY GOMEZ DAYANE MARLEY                                                                        ","Descripcion":"NICOLÁS PIEROLA 207 BUENOS AIRES NORTE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":17.7,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"74596658","Nombre":"ANACLETO VALDEZ HILDA MILAGROS                                                                      ","Descripcion":"MANCO CAPAC 808 VISTA ALEGRE            ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":112.2,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":-8.1358648,"Longitud":-79.0443062,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"17/06/2026","Doi":"77272080","Nombre":"CEDILLO LÓPEZ LISSET                                                                                ","Descripcion":"AV. SANTA 1030","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":140.84,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-8.1004295,"Longitud":-79.0173655,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                                        // 🔹 SERVIDORES DE GOOGLE MAPS (Ultra rápidos)
+                                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                                          attribution:'Google Maps',
+                                          maxZoom:20
+                                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13); // Fuente más grande
+
+                                const icon=L.divIcon({
+                                  className:'',
+                                  html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                       '<!-- Sombra base -->' +
+                                       '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                       '<!-- Círculo principal -->' +
+                                       '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                       '<!-- Texto -->' +
+                                       '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                       '</svg>',
+                                  iconSize:[36,36],
+                                  iconAnchor:[18,20]
+                                });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

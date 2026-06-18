@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        
+                        /* 🔹 CORRECCIÓN MOBILE: Usamos 100dvh y overflow:hidden para que el mapa no empuje el pie fuera de la pantalla */
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+
+                       #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* 🔹 CORRECCIÓN ESTÉTICA Y MOBILE: Pie de página blanco, con flex-wrap y scroll si hay muchas zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Ruta:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"17/06/2026","Doi":"20602724060","Nombre":"COMERCIALIZADORA CENTRAL BELÉN S.A.C.                                                               ","Descripcion":"JR. 25 DE MAYO NRO. 449 (MEDIA CUANDRA ANTES DEL MERCADO CENTRAL)","Zona":"MOYOBAMBA - MAYORISTA","Total":210.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-6.0340222,"Longitud":-76.976431,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"}];
+                        const datosTodos = [{"FechaCc":"17/06/2026","Doi":"00803190","Nombre":"BAZAN  TELLO, JORGE  FEDERICO                                                                       ","Descripcion":"MERCADO CENTRAL PSTO. 201","Zona":"MERCADO CENTRAL/ERICK","Total":114.73,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00806095","Nombre":"DOMINGUEZ PORTOCARRERO, REYNALDA                                                                    ","Descripcion":"CARRT. BAÑOS TERMALES KM 1 - FRENTE A LA EXPLANADA","Zona":"MOYOBAMBA - MAYORISTA","Total":260.78,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00812468","Nombre":"DIAZ PORTOCARRERO, OLGUITH                                                                          ","Descripcion":"MERCADO CENTRAL SORITOR PSTO 148","Zona":"SORITOR 2 - MCDOS/COBER","Total":193.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00812714","Nombre":"CENTURION DE LOZADA, DOLORES                                                                        ","Descripcion":"JR. RICARDO PALMA CDA. 02 - SORITOR","Zona":"SORITOR 3","Total":68.28,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00815351","Nombre":"ACOSTA DE RUIZ , TUDELA                                                                             ","Descripcion":"MERCADO CENTRAL MOYOBAMBA(JUGUERIA NOELA)","Zona":"MERCADO CENTRAL/ERICK","Total":44.05,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00820368","Nombre":"HUAMAN PIZARRO REMIGIO                                                                              ","Descripcion":"JR .EMILO COSTA 221-MOYOBAMBA","Zona":"COCOCHO","Total":95.16,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00823436","Nombre":"QUISPE PEREZ, JOVITA                                                                                ","Descripcion":"MERCADO CENTRAL SECTOR.3-MOYOBAMBA","Zona":"MERCADO CENTRAL/ERICK","Total":74.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00824007","Nombre":"ERMITAÑO RAMOS, BUSTAMANTE                                                                          ","Descripcion":"JR. EMILIO ACOSTA S/N","Zona":"MOYOBAMBA - MAYORISTA","Total":1110.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00830897","Nombre":"ALTAMIRANO FERNANDEZ, ROSALIA                                                                       ","Descripcion":"JR. RAMON CASTILLA 900","Zona":"SORITOR - MAYORISTA","Total":77.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00832352","Nombre":"CABRERA NAVARRO, JOSE RICARDO                                                                       ","Descripcion":"SERAFIN FILOMENO 770","Zona":"MERCADO CENTRAL/ERICK","Total":97.31,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00837630","Nombre":"CASIQUE YOPLAC, LUIS                                                                                ","Descripcion":"JR. CALLAO CDRA. 11(N. ESCOBEDO)","Zona":"MOYOBAMBA - MAYORISTA","Total":3300.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"00838065","Nombre":"ATALAYA VILLANUEVA, MARIA ELVIA                                                                     ","Descripcion":"MCDO. MODELO PUESTO 33","Zona":"SORITOR 2 - MCDOS/COBER","Total":120.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"01046779","Nombre":"DAZA VASQUEZ, ANA                                                                                   ","Descripcion":"MERCADO CENTRAL PTO.637-MOYOBAMBA","Zona":"MERCADO CENTRAL/ERICK","Total":97.31,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"01154171","Nombre":"ORDOÑEZ GRANDEZ, BETTY                                                                              ","Descripcion":"MCDO. PAQUITO S/N","Zona":"MERCADO PAQUITO","Total":55.7,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"10008000340","Nombre":"NUÑEZ DE VIGO DIVA MERCEDES                                                                         ","Descripcion":"JR.25 DE MAYO 253-MOYOBAMBA","Zona":"LLUYLLUCUCHA","Total":866.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20600382731","Nombre":"INVERSIONES LA TABERNA DEL BRUJO S.A.C.                                                             ","Descripcion":"JR. 02 DE MAYO NRO. 804 LLUYLLUCUCHA (ESQUINA CON JR. CUZCO) -  MOYOBAMBA","Zona":"BELEN","Total":193.12,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20600967780","Nombre":"SUPERMERCADO B & B E.I.R.L.                                                                         ","Descripcion":"JR. PUNO NRO. 601 SAN MARTIN - MOYOBAMBA - MOYOBAMBA","Zona":"MOYOBAMBA - MAYORISTA","Total":923.48,"Distribucion":"DISMAR[2]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20602724060","Nombre":"COMERCIALIZADORA CENTRAL BELÉN S.A.C.                                                               ","Descripcion":"JR. 25 DE MAYO NRO. 449 (MEDIA CUANDRA ANTES DEL MERCADO CENTRAL)","Zona":"MOYOBAMBA - MAYORISTA","Total":210.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-6.0340222,"Longitud":-76.976431,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20607113433","Nombre":"NEGOCIACIONES NAHOMY E. I. R. L.                                                                    ","Descripcion":"JR. EMILIO ACOSTA -1 - MCDO. LOS ANGELES -MOYOBAMBA","Zona":"MERCADO CENTRAL/ERICK","Total":47.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20607942057","Nombre":"GRUPO CAFHYSAMP S.A.C.                                                                              ","Descripcion":"JR. EL DORADO NRO. 205 URB. PUNTA SAN FRANCISO","Zona":"MOYOBAMBA - MAYORISTA","Total":1123.54,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20608713990","Nombre":"OM PLAZA MARKET E.I.R.L.                                                                            ","Descripcion":"PEDRO CANGA 374","Zona":"MOYOBAMBA - MAYORISTA","Total":89.1,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20609555697","Nombre":"ASOCIACIÓN OASIS DE SORITOR                                                                         ","Descripcion":"JR. FEDERICO FROEVEL S/N-CDRA. 6-COST. FISCALIA","Zona":"SORITOR - MAYORISTA","Total":107.68,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20611302674","Nombre":"PRIMEN S.A.C.S.                                                                                     ","Descripcion":"JR. DOS DE MAYO NRO. 622 SAN MARTIN","Zona":"LLUYLLUCUCHA","Total":78.86,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"20615520358","Nombre":"CHINA SELVA S.A.C.                                                                                  ","Descripcion":"JR. SAN MARTIN NRO. 468 (COSTADO DE CAJA PIURA)","Zona":"MOYOBAMBA - MAYORISTA","Total":12997.35,"Distribucion":"DISMAR[3]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"27058610","Nombre":"ARRIBASPLATA INFANTE, PERCY WILLIAM                                                                 ","Descripcion":"MERCADO MUNICIPAL PUESTO 01 - SEGUNDA JERUSALEN","Zona":"2DA JERUSALEN","Total":97.31,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"40293405","Nombre":"AGUILAR MORI, ILDA                                                                                  ","Descripcion":"JR LAS FLORES CDRA 7 REF.FRENTE NEGOCIOS MILAGROS","Zona":"SORITOR 2 - MCDOS/COBER","Total":264.28,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"40340058","Nombre":"ALVARADO REYNA, NOELIA                                                                              ","Descripcion":"PTO S/N MCDO LOS ANGELES MOYOBAMBA","Zona":"MERCADO LOS ANGELES","Total":47.1,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"40687324","Nombre":"VILCHEZ BARRERA, SANTOS FLORENCIO                                                                   ","Descripcion":"CARRETERA UCRANIA CDRA.3 (NEGOCIOS MARY)","Zona":"NVA CAJ - MAYORISTA","Total":111.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"41336593","Nombre":"VILLANUEVA VILCHEZ ROSA                                                                             ","Descripcion":"PROL. SERAFIN FILOMENO S/N MOYOBAMBA","Zona":"MOYOBAMBA - MAYORISTA","Total":169.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"42324582","Nombre":"ALARCON CUBAS, SILVIA                                                                               ","Descripcion":"2DO NIVEL MCDO CENTRAL MOYOBAMBA (COSTADO DE JUGUERIA ZOE)","Zona":"MERCADO CENTRAL/ERICK","Total":44.05,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"43457357","Nombre":"CARRANZA LLANOS, EDIL                                                                               ","Descripcion":"JR. REYES GUERRA C_ 1 - MOYOBAMBA","Zona":"MERCADO AYAYMAMA","Total":361.01,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"43458767","Nombre":"ALARCON LLANOS, ROSA ELVIRA                                                                         ","Descripcion":"JR.MIRAFLORES N° 100","Zona":"CALZADA MOY","Total":248.6,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"44000974","Nombre":"AGUILAR MORI, YOLANDA                                                                               ","Descripcion":"JR. MIGUEL GRAU CDR.5-FRENTE BILALR-SORITOR","Zona":"SORITOR 1","Total":76.46,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"44067819","Nombre":"ALEJANDRIA TANTALEAN , IRMA                                                                         ","Descripcion":"MERCADO ZONAL AYAYMAMA","Zona":"MERCADO AYAYMAMA","Total":47.1,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"44081963","Nombre":"MORVELI FERNANDEZ, NAKOR                                                                            ","Descripcion":"JR. CALLAO CDRA. 11","Zona":"MOYOBAMBA - MAYORISTA","Total":1314.0,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"44331779","Nombre":"CARRANZA LLANOS, MARLENY                                                                            ","Descripcion":"MERCADO AYAYMAMA PTO. 82 ENTRADA JUGUERIA - MOYOBAMBA","Zona":"MERCADO AYAYMAMA","Total":361.01,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"46124273","Nombre":"FLORES CARDOZO, GLADIS                                                                              ","Descripcion":"MOYOBAMBA","Zona":"MERCADO CENTRAL/ERICK","Total":553.59,"Distribucion":"DISMAR[2]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"46518748","Nombre":"GUEVARA CHUQUIMANGO, ROSBEL                                                                         ","Descripcion":"MERCADILLO LOS ANGELES PSTO. 77-78-FRENTE A LA PLAZA PAZ Y AMOPR","Zona":"MERCADO LOS ANGELES","Total":17.47,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"47098936","Nombre":"AYAY LEIVA, DAVID                                                                                   ","Descripcion":"JR. MIRAFLORES C- 10 - MOYOBAMBA","Zona":"MOYOBAMBA - MAYORISTA","Total":97.31,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"47762429","Nombre":"BRUNO SANDOVAL, MARIA ESTHER                                                                        ","Descripcion":"EXTERIOR MERCADO MOCHO","Zona":"MERCADO AYAYMAMA","Total":83.56,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"47772812","Nombre":"VALQUI DETT, JONATAN MANUEL                                                                         ","Descripcion":"AV. CANAN/JR. LIMA -2DA. JERUSALEN","Zona":"NVA CAJ 3-MCDO J.OLAYA","Total":473.16,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"61484509","Nombre":"ABAD CABRERA JESSICA, NICOL                                                                         ","Descripcion":"PROLONG. SERAFIN FILOMENO CDRA. 1","Zona":"MOYOBAMBA - MAYORISTA","Total":226.03,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"75963532","Nombre":"CAMPOS CARHUAJULCA, YOISI ARACELI                                                                   ","Descripcion":"MERCADO PAQUITO","Zona":"MERCADO PAQUITO","Total":91.7,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"76171688","Nombre":"CASTILLO JULCA, LUZ MARIA                                                                           ","Descripcion":"JR. AMARGURA/MIGUEL GRAU-SORITOR","Zona":"SORITOR 1","Total":307.51,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"76601289","Nombre":"ACUÑA BARBOZA, YENY YACORY                                                                          ","Descripcion":"CALLE SANTA MONICA S/N URB. VISTA ALEGRE","Zona":"CALVARIO","Total":46.56,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"80258873","Nombre":"FERNANDEZ TANTALEAN , MARIA  ESTERIA                                                                ","Descripcion":"MCDO. LOS ANGELES PTO S/N","Zona":"MOYOBAMBA - MAYORISTA","Total":588.13,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"},{"FechaCc":"17/06/2026","Doi":"80320511","Nombre":"GAVIDIA  CORONEL, WILDOR                                                                            ","Descripcion":"JR. MOYOBAMBA CON JR. LAS FLORES","Zona":"SORITOR 2 - MCDOS/COBER","Total":135.39,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T3B858","Conductor":"SALAS GUTIERREZ, ROGER"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                                        // 🔹 SERVIDORES DE GOOGLE MAPS (Ultra rápidos)
+                                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                                          attribution:'Google Maps',
+                                          maxZoom:20
+                                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13); // Fuente más grande
+
+                                const icon=L.divIcon({
+                                  className:'',
+                                  html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                       '<!-- Sombra base -->' +
+                                       '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                       '<!-- Círculo principal -->' +
+                                       '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                       '<!-- Texto -->' +
+                                       '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                       '</svg>',
+                                  iconSize:[36,36],
+                                  iconAnchor:[18,20]
+                                });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

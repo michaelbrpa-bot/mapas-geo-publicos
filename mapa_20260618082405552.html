@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        
+                        /* 🔹 CORRECCIÓN MOBILE: Usamos 100dvh y overflow:hidden para que el mapa no empuje el pie fuera de la pantalla */
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+
+                       #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* 🔹 CORRECCIÓN ESTÉTICA Y MOBILE: Pie de página blanco, con flex-wrap y scroll si hay muchas zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Ruta:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"17/06/2026","Doi":"10156330197","Nombre":"CRISTOBAL ASCENCIOS MARIA                                                                           ","Descripcion":"CALLE LURIAMA #197 LICORERIA F&M","Zona":"HUACHO","Total":58.35,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7482094,"Longitud":-77.7587364,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10158448071","Nombre":"VARGAS SANCHEZ NELY NANCY                                                                           ","Descripcion":"CA LAURIAMA  550","Zona":"BARRANCA E1","Total":86.25,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.744863,"Longitud":-77.7554642,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10158507787","Nombre":"VASQUEZ CELAYA ISABEL ELIZABETH                                                                     ","Descripcion":"MARIANO MELGAR # 310 // COSTADO DE ROJAS VIDAL - BARRANCA","Zona":"BARRANCA E1","Total":20.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7447493,"Longitud":-77.7577365,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10444894992","Nombre":"DEXTRE NOEL YULI KAREN                                                                              ","Descripcion":"CAL.BARTOLOME DE LAS CASAS # 155 (COSTADO DE COLEGIO INICIAL ARAMAY","Zona":"HUACHO","Total":70.44,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.74409,"Longitud":-77.7557283,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10741712011","Nombre":"MARZANO BAÑEZ LEIDY OLIMPIA                                                                         ","Descripcion":"CALLE BERENICE DAVILA #278","Zona":"HUACHO","Total":309.68,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7479911,"Longitud":-77.761216,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15619916","Nombre":"CORDOVA SALAZAR, MAGNO                                                                              ","Descripcion":"EL PALMO A6 CENTR. MED. LAURIAMA","Zona":"HUACHO","Total":153.15,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7464019,"Longitud":-77.7565216,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15621203","Nombre":"DIAZ BALBUENA MARIA                                                                                 ","Descripcion":"BARBARA DE CHILE (FRENTE A LOZA)","Zona":"HUACHO","Total":64.62,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7432915,"Longitud":-77.7513828,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15626296","Nombre":"PORLES DE TORRES NORA                                                                               ","Descripcion":"CALLE SAN VICENTE # 119","Zona":"HUACHO","Total":20.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7450445,"Longitud":-77.7574039,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15637754","Nombre":"TRUJILLO VILLANUEVA, MARIA VIRGINIA                                                                 ","Descripcion":"CASTILA 478 COST MALLQUI ROJAS","Zona":"HUACHO","Total":181.57,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7486301,"Longitud":-77.7630086,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15840977","Nombre":"MALLQUI REYES SULY                                                                                  ","Descripcion":"LOS EUCALICTOS - LAS GARDENIAS 372","Zona":"HUACHO","Total":19.29,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7445522,"Longitud":-77.7555433,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15856562","Nombre":"CACERES NAVARRO DORIS                                                                               ","Descripcion":"PAMPA LARA # 617","Zona":"HUACHO","Total":18.99,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.74426,"Longitud":-77.7586662,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20600350031","Nombre":"SERMUL ADLS S.A.C                                                                                   ","Descripcion":"MZA A LT-11 OTR. CALLE LOS EUCALIPTOS","Zona":"HUACHO","Total":73.3,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7455402,"Longitud":-77.7538032,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"40077470","Nombre":"FLORES RUBIO, MEY GUADALUPE                                                                         ","Descripcion":"AV PEDRO SAYAN 1947 CSTD ROSAS FLORES CARLOS CASA BLANCA","Zona":"HUACHO","Total":68.5,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7502816,"Longitud":-77.7588365,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"40119225","Nombre":"CASTILLO BARDALES VIOLETA ZULEMA                                                                    ","Descripcion":"LAS GARDENIAS B-29 (PARALELA DE ANDREA)","Zona":"HUACHO","Total":22.93,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7460024,"Longitud":-77.7537005,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"42502355","Nombre":"PUMACALLAHUA CONTRERAS, GILBER                                                                      ","Descripcion":"CALLE LIMA 796 C/PEDRO SAYAN FTE CELIMA TREBOL","Zona":"HUACHO","Total":28.96,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7508754,"Longitud":-77.7598041,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"46200635","Nombre":"MALLQUI ROJAS DELIA MARUJA                                                                          ","Descripcion":"CASTILLA # 470 FRENTE A LA EX UNIVERSIDAD SAN PEDRO","Zona":"HUACHO","Total":84.68,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7668463,"Longitud":-77.7500526,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"46321885","Nombre":"SILVA MAGUIÑA CECILIA SUSANA                                                                        ","Descripcion":"CASTILLA # 354","Zona":"HUACHO","Total":384.44,"Distribucion":"DISMAR[2]-LIDER[1]","Latitud":-10.7487404,"Longitud":-77.7628355,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"70391666","Nombre":"ESTEBAN RAMON, GINA                                                                                 ","Descripcion":"CA. MARIANO MELGAR 600 ESQUINA","Zona":"HUACHO","Total":14.85,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7440875,"Longitud":-77.7579739,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"72802006","Nombre":"RODRIGUEZ ROJAS, JOHR LENNIN.                                                                       ","Descripcion":"FCO VIDAL SEGUNDA CUADRA. PTO #6. COMERCIAL KOKI","Zona":"BARRANCA SSSS                           ","Total":2142.27,"Distribucion":"DISMAR[4]-LIDER[0]","Latitud":-10.746845,"Longitud":-77.7615746,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"}];
+                        const datosTodos = [{"FechaCc":"17/06/2026","Doi":"10156330197","Nombre":"CRISTOBAL ASCENCIOS MARIA                                                                           ","Descripcion":"CALLE LURIAMA #197 LICORERIA F&M","Zona":"HUACHO","Total":58.35,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7482094,"Longitud":-77.7587364,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10158448071","Nombre":"VARGAS SANCHEZ NELY NANCY                                                                           ","Descripcion":"CA LAURIAMA  550","Zona":"BARRANCA E1","Total":86.25,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.744863,"Longitud":-77.7554642,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10158507787","Nombre":"VASQUEZ CELAYA ISABEL ELIZABETH                                                                     ","Descripcion":"MARIANO MELGAR # 310 // COSTADO DE ROJAS VIDAL - BARRANCA","Zona":"BARRANCA E1","Total":20.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7447493,"Longitud":-77.7577365,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10376990","Nombre":"MANRIQUE RABANAL, ROCIO DEL PILAR                                                                   ","Descripcion":"psj progreso MZ b lt 23 frente wily","Zona":"BARRANCA C [+ MERCADO]","Total":1679.83,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10444894992","Nombre":"DEXTRE NOEL YULI KAREN                                                                              ","Descripcion":"CAL.BARTOLOME DE LAS CASAS # 155 (COSTADO DE COLEGIO INICIAL ARAMAY","Zona":"HUACHO","Total":70.44,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.74409,"Longitud":-77.7557283,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"10741712011","Nombre":"MARZANO BAÑEZ LEIDY OLIMPIA                                                                         ","Descripcion":"CALLE BERENICE DAVILA #278","Zona":"HUACHO","Total":309.68,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7479911,"Longitud":-77.761216,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15619916","Nombre":"CORDOVA SALAZAR, MAGNO                                                                              ","Descripcion":"EL PALMO A6 CENTR. MED. LAURIAMA","Zona":"HUACHO","Total":153.15,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7464019,"Longitud":-77.7565216,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15621203","Nombre":"DIAZ BALBUENA MARIA                                                                                 ","Descripcion":"BARBARA DE CHILE (FRENTE A LOZA)","Zona":"HUACHO","Total":64.62,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7432915,"Longitud":-77.7513828,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15626296","Nombre":"PORLES DE TORRES NORA                                                                               ","Descripcion":"CALLE SAN VICENTE # 119","Zona":"HUACHO","Total":20.4,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7450445,"Longitud":-77.7574039,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15636377","Nombre":"AVALO VDA DE RIOS, VIDALDINA                                                                        ","Descripcion":"AV. AVIACION LT-17 REF LAS LEÑAS","Zona":"HUACHO","Total":30.07,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15637754","Nombre":"TRUJILLO VILLANUEVA, MARIA VIRGINIA                                                                 ","Descripcion":"CASTILA 478 COST MALLQUI ROJAS","Zona":"HUACHO","Total":181.57,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7486301,"Longitud":-77.7630086,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15757118","Nombre":"ALDAVE CORDOVA WALTHER                                                                              ","Descripcion":"CA.LIMA # 1154 BARRANCA","Zona":"HUACHO","Total":343.39,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15840977","Nombre":"MALLQUI REYES SULY                                                                                  ","Descripcion":"LOS EUCALICTOS - LAS GARDENIAS 372","Zona":"HUACHO","Total":19.29,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7445522,"Longitud":-77.7555433,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"15856562","Nombre":"CACERES NAVARRO DORIS                                                                               ","Descripcion":"PAMPA LARA # 617","Zona":"HUACHO","Total":18.99,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.74426,"Longitud":-77.7586662,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20571563500","Nombre":"COMERCIAL PAKY S.R.L.                                                                               ","Descripcion":"PJ. AREQUIPA # 22 (MCO MODELO)LIMA - BARRANCA - BARRANCA","Zona":"HUACHO","Total":1105.34,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20571576075","Nombre":"COMERCIALIZADORA CITU E.I.RL.                                                                       ","Descripcion":"JR FRANCISCO VIDAL N 232","Zona":"BARRANCA MAYORISTAS                     ","Total":680.44,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20600350031","Nombre":"SERMUL ADLS S.A.C                                                                                   ","Descripcion":"MZA A LT-11 OTR. CALLE LOS EUCALIPTOS","Zona":"HUACHO","Total":73.3,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7455402,"Longitud":-77.7538032,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20600815751","Nombre":"EMPRESA COMERCIAL HUGO H & B E.I.R.L.                                                               ","Descripcion":"PRO.LIMA # 1106 INT. AB (COSTADO DEL CEMENTERIO)LIMA - BARRANCA - B","Zona":"HUACHO","Total":563.58,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"20601107938","Nombre":"EMPRESA COMERCIAL CHRYSTELLE S.R.L.                                                                 ","Descripcion":"JR. LIMA # 1178LIMA - BARRANCA - BARRANCA","Zona":"HUACHO","Total":855.62,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"40077470","Nombre":"FLORES RUBIO, MEY GUADALUPE                                                                         ","Descripcion":"AV PEDRO SAYAN 1947 CSTD ROSAS FLORES CARLOS CASA BLANCA","Zona":"HUACHO","Total":68.5,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7502816,"Longitud":-77.7588365,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"40119225","Nombre":"CASTILLO BARDALES VIOLETA ZULEMA                                                                    ","Descripcion":"LAS GARDENIAS B-29 (PARALELA DE ANDREA)","Zona":"HUACHO","Total":22.93,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7460024,"Longitud":-77.7537005,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"42502355","Nombre":"PUMACALLAHUA CONTRERAS, GILBER                                                                      ","Descripcion":"CALLE LIMA 796 C/PEDRO SAYAN FTE CELIMA TREBOL","Zona":"HUACHO","Total":28.96,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7508754,"Longitud":-77.7598041,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"42958857","Nombre":"APONTE JARA, LUIS FERNANDO                                                                          ","Descripcion":"CA.BERNICE DAVILA C/JIRON AREQUIPA","Zona":"HUACHO","Total":1244.86,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"44120705","Nombre":"DURAND TORRES, CONNIE ELIANA                                                                        ","Descripcion":"CALLE SAN IGNACIO S/N FTE DE COLEGIO ARGOS 1/2 CUADRA BCA.","Zona":"HUACHO","Total":49.77,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"46200635","Nombre":"MALLQUI ROJAS DELIA MARUJA                                                                          ","Descripcion":"CASTILLA # 470 FRENTE A LA EX UNIVERSIDAD SAN PEDRO","Zona":"HUACHO","Total":84.68,"Distribucion":"DISMAR[1]-LIDER[1]","Latitud":-10.7668463,"Longitud":-77.7500526,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"46321885","Nombre":"SILVA MAGUIÑA CECILIA SUSANA                                                                        ","Descripcion":"CASTILLA # 354","Zona":"HUACHO","Total":384.44,"Distribucion":"DISMAR[2]-LIDER[1]","Latitud":-10.7487404,"Longitud":-77.7628355,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"70391666","Nombre":"ESTEBAN RAMON, GINA                                                                                 ","Descripcion":"CA. MARIANO MELGAR 600 ESQUINA","Zona":"HUACHO","Total":14.85,"Distribucion":"DISMAR[1]-LIDER[0]","Latitud":-10.7440875,"Longitud":-77.7579739,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"72802006","Nombre":"RODRIGUEZ ROJAS, JOHR LENNIN.                                                                       ","Descripcion":"FCO VIDAL SEGUNDA CUADRA. PTO #6. COMERCIAL KOKI","Zona":"BARRANCA SSSS                           ","Total":2142.27,"Distribucion":"DISMAR[4]-LIDER[0]","Latitud":-10.746845,"Longitud":-77.7615746,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"},{"FechaCc":"17/06/2026","Doi":"76603262","Nombre":"BARRETO BAYLON, KEVIN.                                                                              ","Descripcion":"CALLE LIMA 1104","Zona":"BARRANCA MAYORISTAS                     ","Total":596.8,"Distribucion":"DISMAR[0]-LIDER[1]","Latitud":0.0,"Longitud":0.0,"Placa":"T2G872","Conductor":"HUAYTA ATENCIO, DENILSON GUILLERMO"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                                        // 🔹 SERVIDORES DE GOOGLE MAPS (Ultra rápidos)
+                                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                                          attribution:'Google Maps',
+                                          maxZoom:20
+                                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13); // Fuente más grande
+
+                                const icon=L.divIcon({
+                                  className:'',
+                                  html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                       '<!-- Sombra base -->' +
+                                       '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                       '<!-- Círculo principal -->' +
+                                       '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                       '<!-- Texto -->' +
+                                       '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                       '</svg>',
+                                  iconSize:[36,36],
+                                  iconAnchor:[18,20]
+                                });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            distribucion + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toFixed(2) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toFixed(2);
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

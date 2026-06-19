@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [{"FechaCc":"18/06/2026","Doi":"10728729223","Nombre":"VARAS  BENITES, EDWAR  SOLIS                                                                        ","Descripcion":"JR. MIRAFORES # 746  HUAMACHUCO","Zona":"","Total":96.5,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8188598,"Longitud":-78.0442414,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"18056491","Nombre":"RODRIGUEZ  VALVERDE , MARIA  ROSA                                                                   ","Descripcion":"CASTILLA  # 1450","Zona":"SAN PEDRO","Total":114.0,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8201305,"Longitud":-78.0386231,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"19403360","Nombre":"MUÑOZ RIVERA, ISABEL                                                                                ","Descripcion":"SAN ANDRES # 612   HUAMACHUCO","Zona":"","Total":103.92,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8221461,"Longitud":-78.0385847,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"19570358","Nombre":"LARA BRICEÑO, MARIA ALEJANDRINA                                                                     ","Descripcion":"SAN ANDRES # 394   HUAMACHUCO","Zona":"SAN PEDRO","Total":23.55,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8217498,"Longitud":-78.0394632,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"40134597","Nombre":"NEYRA  VERA, CONSTANZA                                                                              ","Descripcion":"JUNIN # 165   HUAMACHUCO","Zona":"SAN PEDRO","Total":103.7,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8197734,"Longitud":-78.0428134,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"42138987","Nombre":"RUIZ QUISPE, SABINA                                                                                 ","Descripcion":"BOLOGNESI # 1284   HUAMACHUCO","Zona":"MAYORISTAS","Total":764.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8115002,"Longitud":-78.0447811,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"44066302","Nombre":"BERMUDEZ CRUZ, LILIA                                                                                ","Descripcion":"SAN ANDREA  Y TUCUPINA  HUAMACHUCO","Zona":"","Total":200.16,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8170959,"Longitud":-78.0455453,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"45634145","Nombre":"CUEVA ZARATE, EVITA MARILU                                                                          ","Descripcion":"SAN ANDRES # 380 (ESQUINA BOTICA)","Zona":"SAN PEDRO","Total":36.2,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8217877,"Longitud":-78.0395531,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"47756630","Nombre":"CAMPOS CRUZADO DE RUIZ, YOLANDA                                                                     ","Descripcion":"SAN ANDRES # 655   HUAMACHUCO","Zona":"SAN PEDRO","Total":108.3,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8223978,"Longitud":-78.0381876,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"60687124","Nombre":"LAIZA PRINCIPE, MAYNET MARIA                                                                        ","Descripcion":"SAN ANDRES/FLORENCIA DE MORA","Zona":"","Total":50.32,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8216261,"Longitud":-78.0418926,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"71865572","Nombre":"ROSADO RUIZ, SARA ANAMY                                                                             ","Descripcion":"SANTA ANA # 1070   HUAMACHUCO","Zona":"MAYORISTAS","Total":280.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8118028,"Longitud":-78.0449949,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"79537866","Nombre":"RAMIREZ LAGUNA, ROSALIA                                                                             ","Descripcion":"SANTA ANA LT- 33   HUAMACHUCO","Zona":"HUAMACHUCO MAYORISTA","Total":300.0,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8123072,"Longitud":-78.0438208,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"80332020","Nombre":"ESCOBEDO CALDERON, VIRGINIA                                                                         ","Descripcion":"7 DE JUNIO # 175 (ANTES DE LOSA SAN SALVADOR)","Zona":"RICARDO PALMA -HUAMACHUCO","Total":83.25,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8210796,"Longitud":-78.0371088,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"}];
+                        const datosTodos = [{"FechaCc":"18/06/2026","Doi":"10728729223","Nombre":"VARAS  BENITES, EDWAR  SOLIS                                                                        ","Descripcion":"JR. MIRAFORES # 746  HUAMACHUCO","Zona":"","Total":96.5,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8188598,"Longitud":-78.0442414,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"18056491","Nombre":"RODRIGUEZ  VALVERDE , MARIA  ROSA                                                                   ","Descripcion":"CASTILLA  # 1450","Zona":"SAN PEDRO","Total":114.0,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8201305,"Longitud":-78.0386231,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"19403360","Nombre":"MUÑOZ RIVERA, ISABEL                                                                                ","Descripcion":"SAN ANDRES # 612   HUAMACHUCO","Zona":"","Total":103.92,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8221461,"Longitud":-78.0385847,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"19570358","Nombre":"LARA BRICEÑO, MARIA ALEJANDRINA                                                                     ","Descripcion":"SAN ANDRES # 394   HUAMACHUCO","Zona":"SAN PEDRO","Total":23.55,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8217498,"Longitud":-78.0394632,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"40134597","Nombre":"NEYRA  VERA, CONSTANZA                                                                              ","Descripcion":"JUNIN # 165   HUAMACHUCO","Zona":"SAN PEDRO","Total":103.7,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8197734,"Longitud":-78.0428134,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"42138987","Nombre":"RUIZ QUISPE, SABINA                                                                                 ","Descripcion":"BOLOGNESI # 1284   HUAMACHUCO","Zona":"MAYORISTAS","Total":764.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8115002,"Longitud":-78.0447811,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"42623136","Nombre":"CAIPO CAMPOS, BENIGNA                                                                               ","Descripcion":"AGUA DE LOS PAJARITOS #CDRA, 3 (PUERTA PLOMA) HUAMACHUCO","Zona":"OBELISCO","Total":183.6,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"44066302","Nombre":"BERMUDEZ CRUZ, LILIA                                                                                ","Descripcion":"SAN ANDREA  Y TUCUPINA  HUAMACHUCO","Zona":"","Total":200.16,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8170959,"Longitud":-78.0455453,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"45634145","Nombre":"CUEVA ZARATE, EVITA MARILU                                                                          ","Descripcion":"SAN ANDRES # 380 (ESQUINA BOTICA)","Zona":"SAN PEDRO","Total":36.2,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8217877,"Longitud":-78.0395531,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"47756630","Nombre":"CAMPOS CRUZADO DE RUIZ, YOLANDA                                                                     ","Descripcion":"SAN ANDRES # 655   HUAMACHUCO","Zona":"SAN PEDRO","Total":108.3,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8223978,"Longitud":-78.0381876,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"60687124","Nombre":"LAIZA PRINCIPE, MAYNET MARIA                                                                        ","Descripcion":"SAN ANDRES/FLORENCIA DE MORA","Zona":"","Total":50.32,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8216261,"Longitud":-78.0418926,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"71865572","Nombre":"ROSADO RUIZ, SARA ANAMY                                                                             ","Descripcion":"SANTA ANA # 1070   HUAMACHUCO","Zona":"MAYORISTAS","Total":280.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8118028,"Longitud":-78.0449949,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"79537866","Nombre":"RAMIREZ LAGUNA, ROSALIA                                                                             ","Descripcion":"SANTA ANA LT- 33   HUAMACHUCO","Zona":"HUAMACHUCO MAYORISTA","Total":300.0,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8123072,"Longitud":-78.0438208,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"},{"FechaCc":"18/06/2026","Doi":"80332020","Nombre":"ESCOBEDO CALDERON, VIRGINIA                                                                         ","Descripcion":"7 DE JUNIO # 175 (ANTES DE LOSA SAN SALVADOR)","Zona":"RICARDO PALMA -HUAMACHUCO","Total":83.25,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MIÑANO ULLOA, MARILU DIANIRA","Latitud":-7.8210796,"Longitud":-78.0371088,"Placa":"T2I929","Conductor":"CONTRERAS RODRIGUEZ, ELSON OMAR"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); // 🔹 CAPTURAMOS COLUMNA NUEVA
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          // 🔹 MODIFICADO: Concatenación del Vendedor al costado de Distribución para la Versión Web
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            // 🔹 MODIFICADO: Inyectamos el texto concatenado con el Vendedor
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"07975484","Nombre":"MODESTA JULCA OBANDO                                                                                ","Descripcion":"MZA G LOTE 9 VIA GARCIA  LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":33.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"10180017351","Nombre":"DIAZ DE VARAS SAMTOS ISABEL                                                                         ","Descripcion":"MZ 14 LTE 03 30 DE NOVIEMBRE LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":42.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"10180098505","Nombre":"PLACENSIA VALDIVIESO MONICA                                                                         ","Descripcion":"PJE MORA MZ 3 LT B LAREDO A 1 CUDRA MCDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":71.67,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"17996806","Nombre":"VASQUEZ AGUILAR LILIA CLARA                                                                         ","Descripcion":"PUESTO 151- GOLOSINAS MERCADO LAREDO","Zona":"MERCADO LAREDO","Total":43.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"17997329","Nombre":"ALAYO TORRES IRMA                                                                                   ","Descripcion":"MERCADO LAREDO INT 17","Zona":"MERCADO LAREDO","Total":69.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0887676,"Longitud":-78.9593208,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"17997491","Nombre":"ROMERO AQUINO MARIA                                                                                 ","Descripcion":"CALLE REMIGIO ESQUIVEL MZ S LTE 5 VICTOR RAUL LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":42.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0865338,"Longitud":-78.9628067,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18004268","Nombre":"JOAQUÍN PAREDES MARIA                                                                               ","Descripcion":"PTO 10 PASADISO MDO LAREDO","Zona":"MERCADO LAREDO","Total":92.15,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0892451,"Longitud":-78.9596647,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18004942","Nombre":"VARAS DE GAMARRA SANTOS                                                                             ","Descripcion":"MERCADO MODELO INT. PTO. 133/134 LAREDO ","Zona":"MERCADO LAREDO","Total":75.48,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18005477","Nombre":"MORENO SALINAS SONIA HAYDEE                                                                         ","Descripcion":"MCDO LAREDO PTO 150                     ","Zona":"MERCADO LAREDO","Total":55.88,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0891511,"Longitud":-78.9595774,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18005772","Nombre":"VALDERRAMA MACHIN MARIA                                                                             ","Descripcion":"PTO. NO 18 INTERIOR MERCADO LAREDO                                    ","Zona":"MERCADO LAREDO","Total":174.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0891557,"Longitud":-78.9592856,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18008185","Nombre":"PALACIOS TAPIA MARILIN                                                                              ","Descripcion":"PSTO 3 INT MCDO LAREDO","Zona":"MERCADO LAREDO","Total":39.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0888265,"Longitud":-78.9594935,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18127433","Nombre":"SALAZAR GUARNIZ DE OLIVARES, SARA  MARGOT                                                           ","Descripcion":"PSJ.PERU MZ.A LT 4 SECT.SANTA MARIA 1LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":130.11,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18143948","Nombre":"EUSTAQUIO VILLACORTA JAVIER                                                                         ","Descripcion":"MCDO MODELO PTO 59  LAREDO              ","Zona":"MERCADO LAREDO","Total":305.89,"Distribucion":"Dismar[2]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0889092,"Longitud":-78.9596034,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18170741","Nombre":"MENDEZ DE PILCO, MELVA  ELIZABETH                                                                   ","Descripcion":"30 DE NOVIEMBRE MZ 16 LT 12 CASA BLANCA DE 3 PISOS","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":103.71,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0857653,"Longitud":-78.953119,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"18186029","Nombre":"GARCIA GONZALES MARTIN JESUS                                                                        ","Descripcion":"MERCADO LAREDO PTO 14","Zona":"MERCADO LAREDO","Total":946.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0892963,"Longitud":-78.959546,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"19063177","Nombre":"GERONIMO CARRANZA, BASILIO                                                                          ","Descripcion":"PLATAFORMA MZ J LT 04 MERCADO LAREDO","Zona":"MERCADO LAREDO","Total":52.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0888737,"Longitud":-78.9597685,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"19097560","Nombre":"ALFARO NEIRA LUCILA                                                                                 ","Descripcion":"VICTOR RAUL MZ O LT 01 LAREDO                                         ","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":32.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"19099891","Nombre":"ALVARADO RODRIGUEZ VIRGINIA                                                                         ","Descripcion":"AV PEDRO GARCÍA MZ R LT 05 III ET LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":48.93,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"20611242469","Nombre":"NEGOCIOS X & L E.I.R.L.                                                                             ","Descripcion":"CALLE LA MERCED 194 LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":3635.31,"Distribucion":"Dismar[2]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"40319148","Nombre":"AVILA ALVARADO YESSICA                                                                              ","Descripcion":"MCD.LAREDO INT.PTO 9091","Zona":"MERCADO LAREDO","Total":32.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0888798,"Longitud":-78.9595531,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"40520509","Nombre":"VALDERRAMA GUTIÉRREZ YEIMI                                                                          ","Descripcion":"ZARUMILLA N°47 LAREDO                   ","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":144.96,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"40990598","Nombre":"TERRONES BARRIGA AILY                                                                               ","Descripcion":"PUESTO 5 MERCADO MODELO                                               ","Zona":"MERCADO LAREDO","Total":55.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"41039403","Nombre":"SANDOVAL VALDIVIESO DORIS ROCIO                                                                     ","Descripcion":"PJALFREDO TELLO MZ H LTE 9 VRAUL   ","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":119.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"41849939","Nombre":"JESICA ALVARADO CHAVEZ                                                                              ","Descripcion":"30DENOVIEMBREMZ.14LTE.2LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":53.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"41998464","Nombre":"PADILLA SILVA JORGE                                                                                 ","Descripcion":"PTO 27 INT MCDO LAREDO","Zona":"MERCADO LAREDO","Total":99.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0892587,"Longitud":-78.9595033,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"42814711","Nombre":"RODRIGUEZ GUARNIZ JESSICA MARIBEL                                                                   ","Descripcion":"30 DE NOVIEMBRE MZ 1 LT 8 LAREDO                                      ","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":86.15,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"44084752","Nombre":"RODRIGUEZ VENTURO, SANDRA JACKELIN                                                                  ","Descripcion":"AV MARTIRES MZ L LT 16 LAREDO","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":94.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"44220756","Nombre":"BARRETO LAYZA PAMELA GRETTEL                                                                        ","Descripcion":"MCDO LAREDO  JAZMINES PTO 3             ","Zona":"MERCADO LAREDO","Total":171.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"44512829","Nombre":"CASTILLO PELAEZ YESENIA                                                                             ","Descripcion":"PROLONGACION REFORMA NRO 1 (AFUERA DEL MERCADO)                       ","Zona":"LAREDO I y II BODEG - CENTENARIO - V.RAUL","Total":103.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"44556380","Nombre":"MERINO ALAYO DIANA CAROLINA                                                                         ","Descripcion":"MCDO LAREDO JAZMINES PUESTO 5           ","Zona":"MERCADO LAREDO","Total":42.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0893173,"Longitud":-78.9592986,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"45475602","Nombre":"OLIVEROS HARO, YULIANA MELISSA                                                                      ","Descripcion":"MERCADO LAREDO PLATAORMA 7","Zona":"MERCADO LAREDO","Total":79.15,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0889435,"Longitud":-78.9597305,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"19/06/2026","Doi":"45480042","Nombre":"MONTOYA  REBAZA SANDRA                                                                              ","Descripcion":"MERCADO  LAREDO PSTO 09  PLATAFORMA     ","Zona":"MERCADO LAREDO","Total":104.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

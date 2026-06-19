@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"00820903","Nombre":"LOPEZ PINEDO YOLANDA                                                                                ","Descripcion":"AV MANSICHE 1622 BLOCK G 104SANTA INES","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":21.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1004826,"Longitud":-79.0437164,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"08405211","Nombre":"DEZA DIAZ SANTOS HOMERO                                                                             ","Descripcion":"AV VALDERRAMA 513 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":48.02,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10009652391","Nombre":"GUTIERREZ ALARCON JACINTO                                                                           ","Descripcion":"LIVER POOL MZAB LOTE1","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":111.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178095833","Nombre":"LAVY QUIROZ MARIA DELINDA                                                                           ","Descripcion":"EMILIO VALDIZAN1205 INT.26","Zona":"QUINTANAS - HUERTA GRANDE","Total":38.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178177589","Nombre":"MEDINA LESCANO CESAR                                                                                ","Descripcion":"JR.CAVEROYMUÑOZNRO.820","Zona":"QUINTANAS - HUERTA GRANDE","Total":197.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178205612","Nombre":"LOPEZ GONSALES LUBBY OFELIA                                                                         ","Descripcion":"CALLE SEBASTIAN LORENTE # 620 URB. LAS QUINTANAS                      ","Zona":"QUINTANAS - HUERTA GRANDE","Total":89.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.0971546,"Longitud":-79.0265681,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178287970","Nombre":"BAYONA ORTIZ ALICIA                                                                                 ","Descripcion":"CAVERO Y MUNOZ 317LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178322279","Nombre":"AGUILAR ROJAS GERARDO NAPOLEON                                                                      ","Descripcion":"CALLE FILADELFIA 306                                                  ","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":46.04,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178518394","Nombre":"PASCUAL MUÑOZ MAXIMILIANO TOMAS                                                                     ","Descripcion":"PRAGA 514 STA ISABEL                                                  ","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":156.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178522642","Nombre":"LINARES CASTILLO YOLANDA VIOLETA                                                                    ","Descripcion":"PRAGA511SANTAISABELTRUJILLOTRUJILLOTRUJILLO","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":50.51,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178634025","Nombre":"BURGA TENAZOA ROGER                                                                                 ","Descripcion":"AV. CARLOS VALDERRAMA NRO. 596 INT. A URB. LAS QUINTANAS (EN LA ESQUIN","Zona":"QUINTANAS - HUERTA GRANDE","Total":120.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178660433","Nombre":"TEJEDA CUZCO GLORIA                                                                                 ","Descripcion":"PJELARCO COX 182LAS QUINTANAS                                         ","Zona":"QUINTANAS - HUERTA GRANDE","Total":222.88,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178899703","Nombre":"JARA QUEZADA PEDRO                                                                                  ","Descripcion":"FILADELFIA 299SANSALVADOR","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":158.21,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10178931798","Nombre":"GONZALES PEÑALOZA MAGDA REINA                                                                       ","Descripcion":"MZ ELT 30 LOS CEDROS","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":38.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10179035893","Nombre":"LEON DIAZ ZOILA ALEJANDRINA                                                                         ","Descripcion":"CAL PEDRO MUÑIZ NRO917 URBEL ALAMBRE","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":31.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10179251863","Nombre":"VILCA TANTAPOMA EMILIANO CORNELIO                                                                   ","Descripcion":"TUPACA AMARU 792 QUINTANAS                                            ","Zona":"QUINTANAS - HUERTA GRANDE","Total":24.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.0974087,"Longitud":-79.0297201,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10180277752","Nombre":"RICARDO ERNESTO DURAN PALACIOS                                                                      ","Descripcion":"AGUAMARINA MZ H  LT27","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":79.47,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10181738231","Nombre":"AGUIRRE FERNANDEZ CARMEN ANDIBEL                                                                    ","Descripcion":"MCD JESUS DE NAZARETH PTO 39  ","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":842.84,"Distribucion":"Dismar[1]-Lider[2]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10453255374","Nombre":"CRUZ GRILLO, YAMILLE KATHERINE                                                                      ","Descripcion":"AGUA MARINA 0103 URB LOS CEDROS","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":63.42,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1017571,"Longitud":-79.0421392,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10475192805","Nombre":"PONCE CLAUDET ANDRE GIANCARLO                                                                       ","Descripcion":"LOS BRILLANTES 621 BLOCK B 104 SANTA INES","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":86.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0981958,"Longitud":-79.0403461,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10476411268","Nombre":"OLORTEGUI ZURITA BECKY STEFANY                                                                      ","Descripcion":"SIBELIUS 965 PRIMAVERA                  ","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":60.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10700338920","Nombre":"CASTILLO GUZMAN GABRIELA LIZBETH                                                                    ","Descripcion":"AV.AMERICA NORTE1905 URB. LAS QUITANAS                                ","Zona":"QUINTANAS - HUERTA GRANDE","Total":64.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10724455692","Nombre":"TACANGA VASQUEZ, JUAN JOSE                                                                          ","Descripcion":"ANTONIO VIVALDI 331 - PRIMAVERA","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":336.18,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1015788,"Longitud":-79.0337657,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10725776468","Nombre":"ESPEJO  ARMAS , ADRIAN  STEPHANO                                                                    ","Descripcion":"AV.MANSICHE 1529 URB.ESMERALDA","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":107.05,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.1017699,"Longitud":-79.0434633,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10744346814","Nombre":"CHANG CEPEDA LUCIA MILAGROS                                                                         ","Descripcion":"CALLE LA CONSTANCIA 197 URB HUERTA","Zona":"QUINTANAS - HUERTA GRANDE","Total":164.16,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.1047318,"Longitud":-79.0272475,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"10753550718","Nombre":"SANDOVAL  CARDENAS , MATHEW ALFYANI                                                                 ","Descripcion":"CL AGUAMARINA 103-A","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":67.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1018108,"Longitud":-79.042187,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"16425859","Nombre":"SANCHEZ MENDOZA SONIA                                                                               ","Descripcion":"MERCADO QUINTANAS PSTO C-10             ","Zona":"QUINTANAS - HUERTA GRANDE","Total":23.52,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"16611707","Nombre":"HUAMAN BARDALES, MARIA  OLGA                                                                        ","Descripcion":"CALLE LOS CUARZOS MZ E LT 33","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":34.8,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17804696","Nombre":"PEREZ LOYAGA AMANDA BALENCIA                                                                        ","Descripcion":"MERCADO WILFREDO CARRANZA PTO 55","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":455.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17836125","Nombre":"RODRIGUEZ GONZALES JACOBA DANILA                                                                    ","Descripcion":"CIRO ALEGRIA 474 LAS QUINTANAS COSTADO DE MERCADILLO TRUJILLOTRUJILL","Zona":"QUINTANAS - HUERTA GRANDE","Total":145.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17838495","Nombre":"FERNANDEZ JUGO ISAURA ANTONIA                                                                       ","Descripcion":"MCDO AGUAMARINA PTO S N","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17850416","Nombre":"SEBASTIAN  EUSTAQUIO, EFIGENIA  GRIMALDINA                                                          ","Descripcion":"AMERICA OESTE MZ A LOTE 13 URBANIZACION LA ESMERALDA","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":119.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17873354","Nombre":"CRUZ DE PINILLOS GENARA MARINA                                                                      ","Descripcion":"MCDO WILFREDO CARRANZA PTO 73","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":505.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17875914","Nombre":"SALAZAR RAMO PABLO#                                                                                 ","Descripcion":"ESTAMBUL 106STA.ISABEL","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":93.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"17907922","Nombre":"OBANDO LIMAY ROSA                                                                                   ","Descripcion":"C.C LAS QUINATANAS PUESTO 12","Zona":"QUINTANAS - HUERTA GRANDE","Total":149.04,"Distribucion":"Dismar[0]-Lider[2]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18086524","Nombre":"MONTOYA KURODA MARIBEL                                                                              ","Descripcion":"AV AGUA MARINA MZ LL LOTE 3 LOS CEDROS F","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":50.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0982882,"Longitud":-79.0411143,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18110677","Nombre":"PINILLOS BALAREZO, RAFAEL EFRAIN                                                                    ","Descripcion":"DRESDELL 343 URB. SAN SALVADOR","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":49.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.1034715,"Longitud":-79.0422608,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18110902","Nombre":"GARCIA GONZALES, WALTER WILFREDO                                                                    ","Descripcion":"PEDRO MUÑIZ 722 URBANIZACIÓN SÁNCHEZ CARRIÓN","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":248.14,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18111882","Nombre":"PEÑA PAREDES KATTY                                                                                  ","Descripcion":"LUIS ALBRICH 695 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":51.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18173561","Nombre":"ESPINOZA PEREZ ELVA                                                                                 ","Descripcion":"MARCIAL ACHARAN 360 (MERCADILLO)","Zona":"QUINTANAS - HUERTA GRANDE","Total":40.57,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18174820","Nombre":"FLORES MARQUEZ EULOGIO WALDIN                                                                       ","Descripcion":"SEBASTIÁN LORENTE 604 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":53.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.097354,"Longitud":-79.0263705,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18198589","Nombre":"CISTERNAS CASTILLO, ELIZABETH  DEL PILAR                                                            ","Descripcion":"CAVERO Y MUÑOZ 667 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":27.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"18892826","Nombre":"ZUMARAN LEYVA JOSE                                                                                  ","Descripcion":"MDOSANTAISABELPTO27","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":154.03,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"19050203","Nombre":"CASTAÑEDA VERA OTILIA                                                                               ","Descripcion":"ISAAC ALBENIZ  443 PRIMAVERA","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":52.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"20604244316","Nombre":"INVERSIONES & SERVICIOS SANTA ISABEL E.I                                                            ","Descripcion":"CALLE SURINAM MZ O LT 18 URB SANTA ISABE","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":114.27,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"20604331634","Nombre":"MARKET PINKY'S S.R.L.                                                                               ","Descripcion":"CAL.MARCIAL ACHARAN NRO. 365 URB. LAS QU","Zona":"QUINTANAS - HUERTA GRANDE","Total":30.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"20613047043","Nombre":"SERVICIOS Y COMERCIO ASECOR E.I.R.L.                                                                ","Descripcion":"AV. MZA. D LOTE. 4 URB. LOS CEDROS FRNT CHIFA LUNA","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":77.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0986395,"Longitud":-79.0433693,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"20613304721","Nombre":"DISTRIBUIDORA Y COMERCIALIZADORA CASA BLANCA E.I.R                                                  ","Descripcion":"TUPAC AMARU 772 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":46.35,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"20615696189","Nombre":"GRUPO SANFER MARKET E.I.R.L.                                                                        ","Descripcion":"CAL.LEANDRO ALVIÑA NRO. 380 URB. SAN FERNANDO ET. 2","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":174.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0936551,"Longitud":-79.0357145,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"40024844","Nombre":"CARDENAS HOYOS, CARDENAS MELISSA                                                                    ","Descripcion":"AV MANSICHE 1439 URB LA ESMERALDA","Zona":"ESMERALDA-SAN SALVADOR- STA ISABEL-CAPULLANAS","Total":105.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.1019448,"Longitud":-79.0425223,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"40504142","Nombre":"TUESTA BRICEÑO CARMEN MARGOT YSABEL                                                                 ","Descripcion":"CHÁVEZ AGUILAR 506  PRIMAVERA","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":39.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0996961,"Longitud":-79.0318398,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"41027476","Nombre":"DOMÍNGUEZ PECHE RAFAEL                                                                              ","Descripcion":"CAVERO MUÑOS 329LAS QUINTANAS           ","Zona":"QUINTANAS - HUERTA GRANDE","Total":559.45,"Distribucion":"Dismar[2]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"41423889","Nombre":"RUIZ CRESPIN ROSALIA                                                                                ","Descripcion":"MAURICIO SIMOS 592                                                    ","Zona":"QUINTANAS - HUERTA GRANDE","Total":244.13,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.0971744,"Longitud":-79.025936,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"42940830","Nombre":"RISCO GONZALES, YULI ANALI                                                                          ","Descripcion":"LARCO COX 190","Zona":"QUINTANAS - HUERTA GRANDE","Total":23.52,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"45756748","Nombre":"VASQUEZ MARIN EDITA                                                                                 ","Descripcion":"CAL.LOS BRILLANTES 421 (TIENDA DE VERDURAS SAN ISIDRO)                ","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":120.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1001145,"Longitud":-79.0404415,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"46948481","Nombre":"HERMENEGILDO ROJAS MARVIN MIGUEL ANGEL                                                              ","Descripcion":"AV AMERICA NORTE 2063","Zona":"QUINTANAS - HUERTA GRANDE","Total":144.72,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"47150484","Nombre":"ERICKA LUJÁN CARBONEL                                                                               ","Descripcion":"MCDO. LOS CEDROS - STAND 02","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":105.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"70203774","Nombre":"VILLAVICENCIO MIÑANO ANGELO ALEXANDER                                                               ","Descripcion":"AV.AMERICA NORTE 2203 LAS QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":38.21,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"70351547","Nombre":"MORY PEREDA, FANNY  JANETH                                                                          ","Descripcion":"PEDRO UREÑA 1125 QUINTANAS","Zona":"QUINTANAS - HUERTA GRANDE","Total":75.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, CARMEN ROSA","Latitud":-8.0960921,"Longitud":-79.0254762,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"19/06/2026","Doi":"80312327","Nombre":"LINARES CESPEDES LUIS ARMANDO                                                                       ","Descripcion":"GOUNZ 1298 SAN FERNANDO","Zona":"CEDROS - STA INES - EL ALAMBRE - MCDO S.CARRION","Total":115.68,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0935277,"Longitud":-79.0355218,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        const datosMapa = [];
+                        const datosTodos = [{"FechaCc":"18/06/2026","Doi":"02635531","Nombre":"CANGO PEÑA, CARMEN MERCEDES                                                                         ","Descripcion":"SAN PEDRO MESA#108","Zona":"SAN PEDRO MERCADO","Total":82.98,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"10191805157","Nombre":"CASTRO MORAN SILVIA CONSUELO                                                                        ","Descripcion":"MANUEL HERNANDEZ416 SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":94.54,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"10191805599","Nombre":"GUANILO DE RODRIGUEZ ALICIA AMELIA                                                                  ","Descripcion":"CASIQUE DE LLOC MZ-CLT-5-SANPEDRO DE LLOC","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":117.95,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"10192583506","Nombre":"NOMBERTO PAIRAZAMAN MILENE NOEMI                                                                    ","Descripcion":"JERUSALEN309-LOS FICUS-SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA II","Total":138.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"10465557422","Nombre":"TORRES VENTURA JOSE AUGUSTO                                                                         ","Descripcion":"SAN PEDRO DE SAUCE S/N","Zona":"SAN PABLO LAS MALVINAS STA LUCIA II","Total":565.76,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"18168995","Nombre":"HERRERA QUINTANILLA RUTH ELENA                                                                      ","Descripcion":"EXTE. MDO. PTO.08 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":159.13,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19181947","Nombre":"ISLA SOTO CARMEN CONCEPCION                                                                         ","Descripcion":"INT  MERCADO PUESTO NRO 07 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":77.8,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19182623","Nombre":"CRUZ CUEVA, ELVA BEATRIZ                                                                            ","Descripcion":"CALLE PRINCIPAL N° 113 SAN ISIDRO SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":76.25,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19182927","Nombre":"CASTRO PAIRAZAMAN ELENA                                                                             ","Descripcion":"PASTOR RIOS 106- SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":102.4,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19183171","Nombre":"ALVITRES SUAREZ JORGE BERNABE                                                                       ","Descripcion":"JR ANCASH N° 502 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":121.2,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19184244","Nombre":"BAUTISTA GOICOCHEA LIDIA                                                                            ","Descripcion":"FCHADA AMARILLA J.DE NIÑO-SAN ISIDRO-S PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":162.75,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19184747","Nombre":"NARRO TAFUR GRACIELA                                                                                ","Descripcion":"CALLE PRINCIPAL31SAN ISIDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":328.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19185059","Nombre":"FLORES POEMAPE, PAULA EMILIANA                                                                      ","Descripcion":"CALLE LA PAZ  179 - SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":36.8,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19185490","Nombre":"ARROYO GUANILO ROSA MARITZA                                                                         ","Descripcion":"CASIQUE DE LLOC MZ-BLT-06FRNTE A ZUMARAN","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":1661.5,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19186226","Nombre":"YEPEZ DE MURRUGARRA FRANCISCA CATALINA                                                              ","Descripcion":"INT. MDO. MESA125-126SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":190.08,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19188347","Nombre":"MAYANGA IZQUIERDO DORA DE LOS MILAGROS                                                              ","Descripcion":"JR.JUNIN447-SAN PEDRO DE LLOC","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":282.4,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19188359","Nombre":"GUANILO PAIRAZAMAN, CARLOS AGUSTIN                                                                  ","Descripcion":"MERCADO PUESTO NRO 08 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":72.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19188881","Nombre":"LEIVA ABANTO, LEONARDO                                                                              ","Descripcion":"2 DE MAYO (FRNTE.PLAZUELA)-SANTA LUCIA","Zona":"SAN PABLO LAS MALVINAS STA LUCIA II","Total":72.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19188902","Nombre":"FLORES MORI, ANDRES ALENJANDRO                                                                      ","Descripcion":"PASTOR RIOS NRO 1534 SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":50.4,"Distribucion":"DISMAR[2]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19188937","Nombre":"JARA GUZMAN, PATRICIA ROXANA                                                                        ","Descripcion":"INTERIOR DE MERCADO SAN PEDRO PUESTO #19","Zona":"SAN PEDRO MAZANCA-CHCOFAN","Total":78.6,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19189421","Nombre":"RODRIGUEZ RODRIGUEZ JUAN                                                                            ","Descripcion":"PSJE. BRITO14 SAN PEDRO","Zona":"SAN MARTIN-HUASCAR I","Total":1465.6,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19231147","Nombre":"LLATAS ALVARADO GERMAN                                                                              ","Descripcion":"INT. MDO. PTO.A-2-SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":93.0,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19248139","Nombre":"SULLON YOVERA ROSA MAGDALENA                                                                        ","Descripcion":"LAS DELICIAS MZ-FLT-16-HORNITO-SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA II","Total":20.08,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19257249","Nombre":"CASTILLO TERRONES, HILDA                                                                            ","Descripcion":"CALLE CAJAMARCA MZ D LT 13 SANTA LUCIA","Zona":"SAN PABLO LAS MALVINAS STA LUCIA I","Total":32.6,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19258218","Nombre":"MOSTACERO RAZURI MAGNA                                                                              ","Descripcion":"INT. MDO. PTO.A-1 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":40.95,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"19259460","Nombre":"QUESQUEN TECEN MARIELENA                                                                            ","Descripcion":"EXTE. MDO.07 SAN PEDRO","Zona":"SAN PEDRO MERCADO","Total":816.34,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"20612483877","Nombre":"FIESTACORP S.A.C                                                                                    ","Descripcion":"JR ALIANZA 531","Zona":"SAN PEDRO MAZANCA-CHCOFAN","Total":15187.81,"Distribucion":"DISMAR[9]-LIDER[0]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"41017492","Nombre":"FELIPE LEON, YEXI ELIZABETH                                                                         ","Descripcion":"CALLE LAS DELICIAS MZ F  LT 16 HORNITO SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA I","Total":103.65,"Distribucion":"DISMAR[1]-LIDER[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"42412961","Nombre":"BENITES CORONEL SABINA FAUSTINA                                                                     ","Descripcion":"STA. LUCIA MZ-3LT-01 SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA I","Total":119.69,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"42574138","Nombre":"MENDOZA QUILCATE, MYRLA MARGARITA                                                                   ","Descripcion":"JR JUNIN NRO 454 SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO I","Total":79.0,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"42663265","Nombre":"MANTILLA ALVA SOLEDAD                                                                               ","Descripcion":"C.LUNA SALCEDO MZ.G-LT.16-HORNITO-SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA I","Total":118.65,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"18/06/2026","Doi":"42782867","Nombre":"POLO JULCA MARIA                                                                                    ","Descripcion":"MZ F LT 23 LA VENTUROZA SAN PEDRO DE LLOC","Zona":"SAN ISIDRO VIA EVITAMIENTO I","Total":105.6,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"46774537","Nombre":"DIAZ PAICO MILAGROS DEL PILAR                                                                       ","Descripcion":"PASTOR RIOS102-SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO I","Total":53.45,"Distribucion":"DISMAR[0]-LIDER[2]","Rv":"BECERRA CUBAS, JUAN CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"47166713","Nombre":"ISLA CORREA, OLENKA JOCELYN                                                                         ","Descripcion":"CLL. LAS DELICIAS MZ. I LT. 03 EL HORNITO - SAN PEDRO","Zona":"SAN PABLO LAS MALVINAS STA LUCIA II","Total":27.3,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"80195705","Nombre":"VENTURA LEON, MARIA CONSUELO                                                                        ","Descripcion":"PUESTO 109 110 111 MERCADO SAN PEDRO","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":77.57,"Distribucion":"DISMAR[0]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"18/06/2026","Doi":"80467002","Nombre":"NARRO TELLO ESPERANZA FRANCISCA                                                                     ","Descripcion":"RICARDO PALMA MZ-CLT-08-SANTA LUCIA","Zona":"SAN ISIDRO VIA EVITAMIENTO II","Total":161.95,"Distribucion":"DISMAR[1]-LIDER[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"}];
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosMapa.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        datosMapa.forEach((p,idx)=>{
+                          const num=idx+1;
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); // 🔹 CAPTURAMOS COLUMNA NUEVA
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          // 🔹 MODIFICADO: Concatenación del Vendedor al costado de Distribución para la Versión Web
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            // 🔹 MODIFICADO: Inyectamos el texto concatenado con el Vendedor
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"10180429285","Nombre":"GUTIERREZ GARCIA IDES                                                                               ","Descripcion":"CALLELIMA115VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":38.55,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4177803,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"10180456771","Nombre":"GUTIERREZ VALDIVIEZO BALBINA                                                                        ","Descripcion":"RAMONCASTILLA 270VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":124.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4147667,"Longitud":-78.7538197,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"10180830753","Nombre":"ASMAD DIAZ ADELA JESUS                                                                              ","Descripcion":"AV.VIRU 845 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":75.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4169321,"Longitud":-78.7587786,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"10431989731","Nombre":"CHACON PAREDES, TEODORO                                                                             ","Descripcion":"CALLE 3 DE DICIEMBRE 300 PUETE VIRU","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":861.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"10441585824","Nombre":"HUAMAN BERNABE KAREN                                                                                ","Descripcion":"RAMONCASTILLANRO.160VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":90.94,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4154205,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"10750593955","Nombre":"ZAVALETA GUTIERREZ, EDERSON ANGEL                                                                   ","Descripcion":"AV LA ALAMEDA 298 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":176.01,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4117431,"Longitud":-78.7541739,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"17436752","Nombre":"ZAMORA CASIANO MARITZA                                                                              ","Descripcion":"CANADA 216 PTE VIRU                     ","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":132.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"17898972","Nombre":"PERALTA CARRANZA, MARTHA  ELENA                                                                     ","Descripcion":"AV. MARÍA CARIDAD MZ. 13 COSTADO DEL COLEGIO","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":265.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"17955906","Nombre":"RAFAEL CHACON SEGUNDO                                                                               ","Descripcion":"MCDO INT. (SECCION CARNE)","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":27.3,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137453,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18043114","Nombre":"BLAS ZAVALETA ANA MARIA                                                                             ","Descripcion":"28 DE JULIO 188 LA HUACA","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":96.32,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4241448,"Longitud":-78.7516944,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18044417","Nombre":"DIAZ PEREDA NELLY                                                                                   ","Descripcion":"INDEPENDENCIA 685 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":95.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4149917,"Longitud":-78.7499233,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18044469","Nombre":"CHAVEZ ESQUERRE GLORIA                                                                              ","Descripcion":"MANUEL SOANE  207 VIRU                                                ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":72.9,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4150121,"Longitud":-78.7506317,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18044572","Nombre":"DIAZ DE GUZMAN, MARIA VIRGINIA                                                                      ","Descripcion":"PSJ LA VIRGEN 145","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":61.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4184545,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18044633","Nombre":"SILVESTRE NIETO ANGÉLICA                                                                            ","Descripcion":"MDOVIRUPTO75","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":43.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137453,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18045901","Nombre":"GAVIDIA SANCHEZ FRANCISCO MARIANO                                                                   ","Descripcion":"MCDO LUIS ALBERTO SANCHEZ PTO 20 PUENTE VIRU                          ","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":81.57,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18046872","Nombre":"GONZALES PULIDO, ISABEL                                                                             ","Descripcion":"CALLE NUEVA 179 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":158.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4166874,"Longitud":-78.7502775,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18048429","Nombre":"DIAZ PULIDO MICAELA                                                                                 ","Descripcion":"PASAJELAVIRGEN 154VIRU                                                ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":152.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4177905,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18082250","Nombre":"DIAZ QUINTANA GLADYS                                                                                ","Descripcion":"CA. ALFONZO UGARTE 138 VIRU             ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":45.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4147667,"Longitud":-78.7538197,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18082710","Nombre":"RISCO MOZO ANTONIEDAD MARILU                                                                        ","Descripcion":"ESQ STA CLARA/CIRO ALEGRIA 190 - VIRU   ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":198.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4136025,"Longitud":-78.7485063,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18082901","Nombre":"LOZANO NAZARIO MARIA LUZ                                                                            ","Descripcion":"RAMON CASTILLA366  VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":173.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4167588,"Longitud":-78.7527571,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18129764","Nombre":"PULIDO GONZALES JANE MARLENE                                                                        ","Descripcion":"28 DE JULIO #122 VIRU PUEBLO","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":41.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4207735,"Longitud":-78.7516944,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18158773","Nombre":"AZUCENA MARTIRES GERMAN MARIÑOS                                                                     ","Descripcion":"MCDO VIRU PTO 6VIRUVIRUVIRU                                        ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":485.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137453,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18175910","Nombre":"CERVERA  ALVA, SOLANGHE  MARIA DEL PILAR                                                            ","Descripcion":"LIBERTAD 204 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":38.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4134286,"Longitud":-78.7541739,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18194854","Nombre":"GUEVARA SALDAÑA MARLENI                                                                             ","Descripcion":"MCD.MODELO PTO 46  VIRU                                               ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":148.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137351,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18208430","Nombre":"ARRIAGA OLIVOS, LUCIA  YNES                                                                         ","Descripcion":"AV VIRU 1916","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":50.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"18209278","Nombre":"RODRIGUEZ BUSTAMANTE CARMELA                                                                        ","Descripcion":"LIMA 130VIRU                                                          ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":112.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4177803,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"19097978","Nombre":"LEON PAREDES ESPERANZA CELITA                                                                       ","Descripcion":"CALLE ALEGIA SN (COSTADO IGLESIA MISION","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":48.65,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4207735,"Longitud":-78.7516944,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"19548832","Nombre":"BOBADILLA ASENCIO JUAN                                                                              ","Descripcion":"PANAMERICANA 1095 PTE VIRU","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":48.47,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"19665316","Nombre":"MEZA DE BOLAÑOS, ROSA VIOLETA                                                                       ","Descripcion":"CALLE ALEGRÍA 551 - VIRU PUEBLO","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":92.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4140008,"Longitud":-78.7506317,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"20539976274","Nombre":"DEVIMIR E.I.R.L.                                                                                    ","Descripcion":"ALFONSO UGARTE 274- TIENDA 1","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":59.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"20603337205","Nombre":"DISTRIBUIDORA ALISON MASSIEL E.I.R.L.                                                               ","Descripcion":"MIGUEL GRAU #199 - LA LIBERTAD VIRU                                   ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":562.6,"Distribucion":"Dismar[2]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137453,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"32384513","Nombre":"JARA  PAJUELO DE AVILA, NELITA  ORFELINDA                                                           ","Descripcion":"PROLONGACIÓN ALFONSO UGARTE 124-A","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":70.42,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4169321,"Longitud":-78.7587786,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"40556601","Nombre":"CARRANZA ROJAS DELIA                                                                                ","Descripcion":"PUESTO 36 MERCADO PUENTE VIRU","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":58.18,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"40801315","Nombre":"BLAS URCIA ELIZABETH                                                                                ","Descripcion":" LOS LAURELES. # 210. PTE. VIRÚ                                       ","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":57.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"41254036","Nombre":"MATOS CARRION YULIANA PATRICIA                                                                      ","Descripcion":"MCDO VIRU PTO 11 VIRU PUEBLO                                          ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":29.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137351,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"41709958","Nombre":"PINCO CABRERA KARLA PATTY                                                                           ","Descripcion":"31 DE MAYO 195 A VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":23.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4169321,"Longitud":-78.7587786,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"42087464","Nombre":"BARRERA  SALAZAR, MARIELA                                                                           ","Descripcion":"AV. VIRU 2217 FRENTE LOS TRES POSTES ALTA TENSION","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":99.99,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"42799561","Nombre":"RUBIO VASQUEZ MARIA ADRIANA                                                                         ","Descripcion":"AV VIRU 120 FRENTE LA COMISARÍA                                       ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":930.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4169321,"Longitud":-78.7587786,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"42905036","Nombre":"CASIANO DELGADO ROSA EDITH ANGELA                                                                   ","Descripcion":"ALFONSO UGARTE 212 VIRU                 ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":322.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4151038,"Longitud":-78.7538197,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"42987688","Nombre":"ESQUERRE QUINTANA PEDRO HENRY                                                                       ","Descripcion":"AV. VIRU 1072  VIRU (COSTADO ISTI VIRU)","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":34.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.415931,"Longitud":-78.7591328,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"43116472","Nombre":"ZAVALETA GAMBOA JOSE ANGEL                                                                          ","Descripcion":"BOLOGNESI 161- VIRU                                                   ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":51.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4147667,"Longitud":-78.7538197,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"44567393","Nombre":"ESQUIVEL CORRO ANALI                                                                                ","Descripcion":"AV. LA ALAMEDA 274 VIRU                 ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":84.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137351,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"44835261","Nombre":"UBILLUS SOLES, WALTER YVAN                                                                          ","Descripcion":"A. V ALAMEDA # 283 VIRU","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":145.09,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4120802,"Longitud":-78.7541739,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"45511732","Nombre":"BELLEZA PRADO ADRIANA HAYDEE                                                                        ","Descripcion":"INDEPENDENCIA 162 VIRU                                                ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":55.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137453,"Longitud":-78.7534655,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"47027196","Nombre":"BLAS JULIAN ERIKA ANATHALY                                                                          ","Descripcion":"CA NUEVA LOS PALTOS MZ C LOTE 12 VIRU   ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":161.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4161865,"Longitud":-78.7562992,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"70113387","Nombre":"DIAZ SICCHA, LIS EVELYN                                                                             ","Descripcion":"CALLE LOS SAUCES 106 PTE. VIRU","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":214.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"71839398","Nombre":"CARRANZA ZAVALETA, ALEJANDRA  MARIBEL                                                               ","Descripcion":"AV CARIDAD S/N FRENTE A FERRETERÍA OMAPE","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":53.87,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"73124543","Nombre":"BRICEÑO MORLLAS JEISON                                                                              ","Descripcion":"AV. LA ALAMEDA 302 - C VIRU             ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":266.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4137351,"Longitud":-78.7531113,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"75102069","Nombre":"NEYRA CASTILL NURIA ALESSANDRA                                                                      ","Descripcion":"AV VIRÚ 418 FTE COLEGIO VIRGEN DE GUADALUPE                           ","Zona":"VIRU PUEBLO/MCDO - ALAMEDA - 28 D JULIO","Total":87.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CABANILLAS RUIZ, GLORIA ISABEL","Latitud":-8.4169321,"Longitud":-78.7587786,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"80329812","Nombre":"ESPEJO YUPANQUI MARIA                                                                               ","Descripcion":"SAN FRANCISCO S NCASA VERDEPUENTE VIRU","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":47.12,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"80349690","Nombre":"REBAZA MANTILLA, PATRICIA                                                                           ","Descripcion":"CALLE PROGRESO S/N EL SANJON MEDIA CDRA AV. VIRU FACHADA CELESTE","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":167.15,"Distribucion":"Dismar[1]-Lider[2]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"19/06/2026","Doi":"80470555","Nombre":"TORRES CUSTODIO TEREZA                                                                              ","Descripcion":"AV. VIRU 1489 COSTADO FUNERARIA VERA","Zona":"PUENTE VIRU II - MCDO PUENTE","Total":77.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

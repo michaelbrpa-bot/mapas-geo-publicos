@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:800;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>RUTA</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"10178131015","Nombre":"SANCHEZ  MORALES , MARIA  JULIA                                                                     ","Descripcion":"Av Victor Raúl mz 2 lte 10 (grifo primax chao","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":54.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"10295523315","Nombre":"LEON ZELA MARLENE                                                                                   ","Descripcion":"BOLIVAR 201 CHAO (COMERCIAL ABRANCITO)                                ","Zona":"CHAO I - MCDO CHAO","Total":125.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5404832,"Longitud":-78.6771494,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"10416687329","Nombre":"SEVILLANO REYES DE GUTIERREZ LILIANA MARITZA                                                        ","Descripcion":"LAS PONCIANAS MZ 95_ LT 14 VALLE DIOS                                 ","Zona":"VALLE DE DIOS","Total":207.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"10432460407","Nombre":"FERREL VILLARREAL BERTILA ROCIO                                                                     ","Descripcion":"LOS ANGELES MZ C LT 22 CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":30.45,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"10458753836","Nombre":"SANCHEZ CORONEL MARITA                                                                              ","Descripcion":"CL LAS PONCEANAS MZ 50 LT 07(FTE PLAZA ARMAS) VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":257.38,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"10619147940","Nombre":"ZUMARAN CAVERO, JOHAN LUISIN                                                                        ","Descripcion":"AV VICTOR RAÚL 258 CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":63.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"16581299","Nombre":"ZAMORA CHILON SEGUNDO EMILIO                                                                        ","Descripcion":"PASAJE BOLIVAR 169 CHAO                                               ","Zona":"CHAO I - MCDO CHAO","Total":20.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5403203,"Longitud":-78.6772156,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"18194807","Nombre":"REYES MERINO, JULIO  DANIEL                                                                         ","Descripcion":"JOSÉ OLAYA MZ H LOTE 6","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":103.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"19078948","Nombre":"AVILA ALVARADO, JOSE  ERMITAÑO                                                                      ","Descripcion":"AV. LA RIVERA #135 FRENTE IGLESIA - CHAO","Zona":"CHAO I - MCDO CHAO","Total":1717.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5415163,"Longitud":-78.6777259,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"19083658","Nombre":"CERNA GARRO DE SOLES IRIS YOLANDA                                                                   ","Descripcion":"MARIA ARGUEDA MZ 7 LT 22 CHAO                                         ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":57.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"19084003","Nombre":"SICCHA GARCIA MARIA LUISA                                                                           ","Descripcion":"MZC LTE 22 LOS ANGELES CHAO                                           ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":95.07,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"19572791","Nombre":"OTINIANO ARTEAGA GROVER FRANCISCO                                                                   ","Descripcion":"MIGUEL GRAU 299 CHAO                                                  ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":115.68,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"20560166941","Nombre":"ANYSHIEFF E.I.R.L.                                                                                  ","Descripcion":"AV. CESAR VALLEJO NRO. 101 URB. CHAO","Zona":"CHAO I - MCDO CHAO","Total":140.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5414013,"Longitud":-78.6763194,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"20604658242","Nombre":"INVERSIONES GENERALES RUVILSAN S.A.C.                                                               ","Descripcion":"CAL.LOS COCOS MZA. 72 LOTE. 27 P.J. NUEV","Zona":"VALLE DE DIOS","Total":948.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"20606774851","Nombre":"CORPORACION FARMA & SERVICIOS MEDICOS E.I.R.L.                                                      ","Descripcion":"AV VICTOR RAUL 205  CHAO","Zona":"CHAO I - MCDO CHAO","Total":212.4,"Distribucion":"Dismar[2]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"26923617","Nombre":"CRUZ ALVA CECILIA ALBERTINA                                                                         ","Descripcion":"LOS ANGELES MZ A LT 20 CHAO ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":396.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"26953226","Nombre":"CARRION VASQUEZ SANTOS                                                                              ","Descripcion":"PRIMAVERAMZ.57LTE.7VALLEDEDIOS","Zona":"VALLE DE DIOS","Total":1097.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"26957500","Nombre":"ROSA MELVA URTADO BRICEÑO                                                                           ","Descripcion":"LAS DELICIAS MZ.2 LTE.19 CHAO","Zona":"CHAO I - MCDO CHAO","Total":121.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5386210391,"Longitud":-78.6805673316,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"40135203","Nombre":"PALOMINO HUARCAYA KATIA NANCY                                                                       ","Descripcion":"LOS CLAVELES MZ 17 LOTE 19 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":65.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"40169907","Nombre":"DELGADO ALTAMIRANO, EUDES                                                                           ","Descripcion":"LOS COCOS MZ 72 LT 25 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":105.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"40247484","Nombre":"CHAVEZ POLO, ROSMERY                                                                                ","Descripcion":"MZ.B56 LT.21 1ERA ETAPA DE MARVERDE CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":183.69,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"40582933","Nombre":"SALINAS VILCHEZ, VILMA                                                                              ","Descripcion":"PALMERAS/ FLORES MZ 28 LT 5 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":29.65,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"41398217","Nombre":"GENOVEZ SANCHEZ, ELIZABETH                                                                          ","Descripcion":"MCDO VALLE DE DIOS PSTO S/N ACOSTADO BAÑO","Zona":"VALLE DE DIOS","Total":37.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"41506446","Nombre":"HONORES ABANTO, VANESSA  ELIZABETH                                                                  ","Descripcion":"MZ B63 lote 24 mar verde chao","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":121.84,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"42003404","Nombre":"JULCA RODRIGUEZ EUSEBIA                                                                             ","Descripcion":"AV LOS NARANJOS 52-19 VALLE DIOS                                      ","Zona":"VALLE DE DIOS","Total":203.59,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"42546783","Nombre":"TORRES CUSTODIO VICENTA                                                                             ","Descripcion":"MCDOVALLEDEDIOSPTO90","Zona":"VALLE DE DIOS","Total":34.56,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"42571713","Nombre":"CABRERA QUILICHE CARLOS HOLGER                                                                      ","Descripcion":"PASAJE SANTA VICTORIA MZ H LTE 11                                     ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":34.72,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"42970821","Nombre":"VILCHEZ PADILLA WILFREDO                                                                            ","Descripcion":"MCDO. CHAO  PTO. #  147   CHAO                                        ","Zona":"CHAO I - MCDO CHAO","Total":1523.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.540733,"Longitud":-78.6777433,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"43333927","Nombre":"LAYZA CRUZ NERI                                                                                     ","Descripcion":"LOS FICUS MZ 29 LT 06 VALLE DE DIOS     ","Zona":"VALLE DE DIOS","Total":68.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"43674234","Nombre":"RIOS GANOZA, LIZ  GIANINA                                                                           ","Descripcion":"CL RIVERA # 437 - CHAO","Zona":"CHAO I - MCDO CHAO","Total":49.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5385509,"Longitud":-78.679744,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"44218458","Nombre":"LEON NARRO MARIA RITA                                                                               ","Descripcion":"CALLE PSJE SANTA VICTORIA MZ H LT 11 CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":66.22,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"44415987","Nombre":"YOBANA BERROCAL ROJAS                                                                               ","Descripcion":"MERCADO VALLE DE DIOS PTO 69","Zona":"VALLE DE DIOS","Total":46.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"44884241","Nombre":"DOMINGUEZ CORREA, ANGELA MARIA                                                                      ","Descripcion":"LAS PALMERAS MZ 17 LT 22 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":150.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"45325284","Nombre":"TINEO PARRA DISNEY                                                                                  ","Descripcion":"MZ B 72 LTE 9 MAR VERDE CHAO","Zona":"CHAO I - MCDO CHAO","Total":20.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"46305930","Nombre":"CERNA VILLANUEVA, ALICIA                                                                            ","Descripcion":"CALLE 2 DE MARZO MZ 3I LT 4 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":108.43,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"46662886","Nombre":"ALVARADO PANTOJA, EMERITA                                                                           ","Descripcion":"PUESTO 18 MERCADO VALLE DE DIOS PUERTA 2","Zona":"VALLE DE DIOS","Total":161.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"46921965","Nombre":"POMA DE LA CRUZ ANTOLINA MARGARITA                                                                  ","Descripcion":"MZ B53 LTE 12  MARVERDE 3 ETAPA. CHAO                                 ","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":116.86,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47360233","Nombre":"CHAUPE  RAMIREZ, MAYRA  LUZ                                                                         ","Descripcion":"CL WIESE MERCADO PTO 65 - CHAO","Zona":"CHAO I - MCDO CHAO","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5402647,"Longitud":-78.6775876,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47483530","Nombre":"CHAVEZ MARQUEZ, ALFREDO                                                                             ","Descripcion":"CALL RIVERA 128 - CHAO","Zona":"CHAO I - MCDO CHAO","Total":211.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5417152,"Longitud":-78.6777547,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47605501","Nombre":"BACILIO TOCONGO DEYMI                                                                               ","Descripcion":"CA.SANTA ROSA MZ.101 LTE.18 V.DE DIOS","Zona":"VALLE DE DIOS","Total":96.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47730558","Nombre":"VILELA LUNA, MONICA  SAIDA                                                                          ","Descripcion":"AV CESAR VALLEJO 156 CHAO","Zona":"CHAO I - MCDO CHAO","Total":20.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5409437,"Longitud":-78.6776671,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47861827","Nombre":"DURAN MIRANDA, MARIA JESUS                                                                          ","Descripcion":"MZ B53 LT 5 MARVERDE 3 ETAPA CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":109.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47975835","Nombre":"DE LA CRUZ ESPELETA ARELI ESTHER                                                                    ","Descripcion":"AV.VICTOR RAÚL 271 CHAO","Zona":"CHAO I - MCDO CHAO","Total":353.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.5403023,"Longitud":-78.6764142,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"47994420","Nombre":"OTINIANO TAMBO, JOSE  MIGUEL                                                                        ","Descripcion":"AYACUCHO 552 CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":257.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"48366651","Nombre":"FALCON TRUJILLO, KATHERIN IRENE                                                                     ","Descripcion":"MZ B78 LTE 3 MARVERDE 4 ETAPA CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":55.46,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"48492594","Nombre":"VILLACORTA RODRIGUEZ MARGARITA AURELY                                                               ","Descripcion":"CALLE BELEN MZ137 LT13 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":112.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"70054745","Nombre":"ALVAREZ CASTILLO, LUCY  FLOR                                                                        ","Descripcion":"IV ETAPA MZ 101 LTE 8  MARVERDE CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":234.71,"Distribucion":"Dismar[2]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"70913461","Nombre":"PEREDA AGUILAR OLVER DENILSON                                                                       ","Descripcion":"MERCADO VALLE DE DIOS PTO 57 CHAO","Zona":"VALLE DE DIOS","Total":140.76,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"71760263","Nombre":"CALDERÓN JULCA JAMIL FREY                                                                           ","Descripcion":"MZ.B72 LOT.13 MAR VERDE","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":249.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"72961264","Nombre":"ORTEGA DE LA CRUZ, MILY                                                                             ","Descripcion":"MZ B81 LOTE 2 4TA ETAPA MAR VERDE","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":113.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"73934680","Nombre":"ARAUJO CARRANZA, EDIN  MISAEL                                                                       ","Descripcion":"LAS PONCIANAS MZ.72 LOTE 31","Zona":"VALLE DE DIOS","Total":1581.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"74156012","Nombre":"CASTRO PAISIG, WILLAM                                                                               ","Descripcion":"MZ B41 lote 12 MAR VERDE","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":52.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"76775716","Nombre":"GAMARRA BUADO, KETTY EREDITH                                                                        ","Descripcion":"MZ B82 LTE 40 4 ETAPA MARVERDE CHAO","Zona":"CHAO II- EL CHINO - CHAO MARVERDE","Total":125.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"77568922","Nombre":"HOYOS CAMPOS, KEILA  MALLARIS                                                                       ","Descripcion":"CALLE SANTA ROSA MZ 106 lt14 VALLE DE DIOS","Zona":"VALLE DE DIOS","Total":31.34,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"},{"FechaCc":"19/06/2026","Doi":"77670618","Nombre":"CARRASCO CHOQUE, MARIA  ISABEL                                                                      ","Descripcion":"MZ.B59 LT38  3ERA ETAPA MARVERDE","Zona":"CHAO I PARTE ALTA  [53J]","Total":211.98,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"MANRIQUE MAZA CESAR AUGUSTO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

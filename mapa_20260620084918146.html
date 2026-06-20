@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"02727471","Nombre":"FLORES VILLEGAS MARGARITA                                                                           ","Descripcion":"MERCADO VICTOR RAUL PTO 236 VIRU","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":68.24,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"09754687","Nombre":"RAMIREZ AGUILAR, NANCY  ELIZABETH                                                                   ","Descripcion":"MZ F LOTE 29 LOS LAURELES CALIFORNIA","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":133.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"10180822785","Nombre":"GUTIERREZ HURTADO DE BERNABE CLORINDA                                                               ","Descripcion":"MZ 12 LT 1 VICTOR RAUL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":149.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4050445557,"Longitud":-78.8267211914,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10181143199","Nombre":"GARCIA VILLAREAL CARMEN                                                                             ","Descripcion":"AV LOS LAURELES S/N AAHH SAN AGUSTIN CAL                              ","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":45.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10412814644","Nombre":"MARIÑO NARVAEZ YENI                                                                                 ","Descripcion":"MZ N LOTE 15 VICTOR RAUL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":81.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4050445557,"Longitud":-78.8267211914,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10430480788","Nombre":"VASQUEZ ASUNCION PILAR                                                                              ","Descripcion":"MZ 13 LTE 01 ( FARMACIA VASQUEZ ) X (EX MCDO VIEJO) VICTOR RAÚL       ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":157.32,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10449207489","Nombre":"ROMAN  SALIRROSAS , MARIANA  ALEJANDRINA                                                            ","Descripcion":"MERCADO VICTOR RAÚL TIENDA NÚMERO 14","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":315.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10605938332","Nombre":"CUEVA CORNELIOS , SONIA LUZMILA                                                                     ","Descripcion":"MZ G LT 13 ALTO CALIFORNIA VIRU","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":215.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10706835658","Nombre":"GOMEZ RODRIGUEZ YULEISI MADALI                                                                      ","Descripcion":"PANAMERICANA MZ 22 LOTE 20 VICTOR RAUL P","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":92.44,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4057217,"Longitud":-78.8243583,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"10708264445","Nombre":"NICOLE STEFFANI, CASTRO BACA                                                                        ","Descripcion":"MZ F6 LTE 18  SIEMBRA DEL VALLE 4TA ETAPA ( 3ERA ENTRADA )","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":344.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4025891,"Longitud":-78.8334746,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"10754490301","Nombre":"MINCHOLA  AGUILAR , BETTY  LISETH                                                                   ","Descripcion":"MZ. D LT. 1 SAN JOSÉ (BOTICA K&L)","Zona":"SAN JOSE - NUEVO CHAO","Total":42.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.4476157,"Longitud":-78.7372885,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"16006308","Nombre":"VALLE RIVERA LUCIO                                                                                  ","Descripcion":"MCD VICTOR RAUL PTO 272  VIRU","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":238.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"18047530","Nombre":"GARCIA ARCE JACINTO                                                                                 ","Descripcion":"MZ 23 LTE 10 VICTOR RAUL                                              ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":51.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4055428,"Longitud":-78.8250359,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"18083577","Nombre":"CABRERA HILARIO NORMA LUZ                                                                           ","Descripcion":"AV LOS LAURELES MZ F LT 31","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":106.11,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"18135083","Nombre":"GONZALES OLIVARES ROCIO                                                                             ","Descripcion":"PSTO 187  . NUEVO MERCADO V. RAULVIRUVIR","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":79.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"18208077","Nombre":"POLO TAMBO SANTOS EUGENIA                                                                           ","Descripcion":"REPUBLICA DEL PERÚ MZ G LT 8 (CASA VERDE)SAN JOSÉ CHAO                ","Zona":"SAN JOSE - NUEVO CHAO","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.4467286,"Longitud":-78.7415439,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"18209215","Nombre":"TORRES MARIÑOS FLOR MARINA                                                                          ","Descripcion":"MZ 11 LTE 21 LOS PINOSV RAUL   ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":49.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4024208,"Longitud":-78.8257935,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"19076694","Nombre":"EUSTAQUIO VILLANUEVA AGUSTINA                                                                       ","Descripcion":"DIEGO DE ALMAGRO MZ J LT 12 CALIFORNIA","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":97.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"19094472","Nombre":"AVALOS RAFAEL LENIN ROCIO                                                                           ","Descripcion":"TUPAC AMARU MZ D LTE 3 CALIFORNIA VIRU                                ","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":239.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"19565565","Nombre":"ARAUJO BACA PEDRO CELESTINO                                                                         ","Descripcion":"MCDO NAZARENO PTO 4 Y 5 CALLE GARDENIAS NVO CHAO                      ","Zona":"SAN JOSE - NUEVO CHAO","Total":440.86,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.511512,"Longitud":-78.6776705,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"19566862","Nombre":"PAREDES GARCIA MARTHA                                                                               ","Descripcion":"LOS PINOS P.ALTA MZ. 3 LT. 4 VICTOR RAUL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":72.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.402655,"Longitud":-78.827716,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"20600831675","Nombre":"DISTRIBUIDORA JIMAR S.A.C.                                                                          ","Descripcion":"MZA. 24 LOTE. 20 A.H. VICTOR RAUL HAYA (FRENTE A TALSA)","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":33.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4051647,"Longitud":-78.8266284,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"20613483706","Nombre":"COMERCIAL JOSECITO E.I.R.L.                                                                         ","Descripcion":"AV LAS AMÉRICAS MZ 22 LT 03 - SAN JOSÉ","Zona":"SAN JOSE - NUEVO CHAO","Total":459.31,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.4473948,"Longitud":-78.7376174,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"20613974831","Nombre":"INVERSIONES ARISMA V & M S.A.C.                                                                     ","Descripcion":"MERCADO SAN JOSE - PTS 8 -SAN JOSÉ","Zona":"SAN JOSE - NUEVO CHAO","Total":182.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.4473774,"Longitud":-78.7377312,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"26705961","Nombre":"ROJAS SOTO JULIA CRISTINA                                                                           ","Descripcion":"CARRPROYECTO MZ D LTE 20 S JOSE                                       ","Zona":"SAN JOSE - NUEVO CHAO","Total":138.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"40187021","Nombre":"CASTILLO TORRES MARIA YOLANDA                                                                       ","Descripcion":"MZ 21 LTE 06 VICTOR RAUL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":70.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"40328058","Nombre":"MAGUIÑA LUGO GUISELL                                                                                ","Descripcion":"NUEVO MCDO VICTOR RAUL PTO 258 VIRUVIRUVIRU","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":453.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"40568107","Nombre":"EMILIANA FERNANDA SICCHA SAMANA                                                                     ","Descripcion":"MZA 10 LOTE 20 SECTOR LOS PINOS PARTE ALTAVIRUVIRU","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":30.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.401966,"Longitud":-78.8257507,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"40719430","Nombre":"CUEVA RIOS CECILIA                                                                                  ","Descripcion":"MZ.3LT.8VICTORRAUL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":338.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4050445557,"Longitud":-78.8267211914,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"41372464","Nombre":"MARIA ESTHER CARLOS CUBA                                                                            ","Descripcion":"SANCHEZ CARRION MZ C LTE 2  CALIFORNIA                                ","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":79.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"41466611","Nombre":"ISABEL MAGDALENA MELQUIADES RUIZ                                                                    ","Descripcion":"MZ 11 LOTE 4 SECTOR VICTOR RAULVIRUV","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":157.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4018741,"Longitud":-78.8257417,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"42769057","Nombre":"BARRETO  MONTES, FREDY                                                                              ","Descripcion":"PARAGUAY MZ. C LT. 16 SAN JOSÉ","Zona":"SAN JOSE - NUEVO CHAO","Total":51.62,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.45087,"Longitud":-78.736759,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"43613811","Nombre":"QUISPE CARBAJAL JEMMY                                                                               ","Descripcion":"CL BOLOGNESI MZ F LT 5 SAN JOSÉ                                       ","Zona":"SAN JOSE - NUEVO CHAO","Total":48.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"43715197","Nombre":"AVALOS RAFAEL MILTON                                                                                ","Descripcion":"MZ D LOTE1 CALIFORNIA","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":140.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"43963996","Nombre":"MATOS VALERA CARMEN                                                                                 ","Descripcion":"MZ D LTE 15 NUEVO VICTOR RAUL           ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":31.23,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4041685,"Longitud":-78.8268505,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"44303217","Nombre":"NARCIZO GOMEZ, SILVINA JAQUELIN                                                                     ","Descripcion":"MCDOVICTORRAULPTO 30VIRU","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":157.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"44689026","Nombre":"CRUZ SALVATIERRA MIRTHA                                                                             ","Descripcion":"MERCADO VÍCTOR RAUL #15 (AFUERA)","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":252.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"44988847","Nombre":"PIZAN TANDAYPAN OLINDA                                                                              ","Descripcion":"REPUB. DE FRANCIA MZ G LTE 6 SAN JOSE                                 ","Zona":"SAN JOSE - NUEVO CHAO","Total":74.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.4495178,"Longitud":-78.7397804,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"45447460","Nombre":"ROJAS ZEGARRA ROSITA MARINA                                                                         ","Descripcion":"MZ B2 LTE 31 SIEMBRA DEL VALLE                                        ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":40.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4029733,"Longitud":-78.8307033,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"46852609","Nombre":"RUIZ SANCHEZ, SANTOS MARIBEL                                                                        ","Descripcion":"MZ C4 LTE 14 SIEMBRA DEL VALLE","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":72.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4029023,"Longitud":-78.8312686,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"47628711","Nombre":"CARRANZA CAMPOS, KIMERLY CAMPOS                                                                     ","Descripcion":"MERCADO VICTOR RAÚL PUESTO 81","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":52.41,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"47862127","Nombre":"RUIZ SANCHEZ, GLORIA  ESTEFANI                                                                      ","Descripcion":"MZ D8 LT 11 SIEMBRA DEL VALLE","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":204.79,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.402795,"Longitud":-78.8320083,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"70323169","Nombre":"LUJAN POLO SAYDHA YULISSA                                                                           ","Descripcion":"J.C.MARIATEGUI  MZ G LT 25 CALIFORNIA","Zona":"MCDO VICTOR RAUL - CALIFORNIA","Total":30.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CELIS VARGAS, ANGEL","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"70598409","Nombre":"BURGOS ALTAMIRANO, JESSICA  EDITH                                                                   ","Descripcion":"MZ F5 LTE 20 SIEMBRA DEL VALLE 4TA ETAPA (3ERA ENTRADA","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":22.59,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4023418,"Longitud":-78.8334771,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"72401217","Nombre":"REYES CASTILLO, ANGELES  ABIGAIL                                                                    ","Descripcion":"MZ C4  LTE 01 SIEMBRA DEL VALLE","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":201.38,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4027235,"Longitud":-78.8311099,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"72890889","Nombre":"VILLANUEVA VASQUEZ, RUTH  NOEMI                                                                     ","Descripcion":"MZ F22 LTE 22 SIEMBRA DEL VALLE 4TA ETAPA ( 3RA ENTRADA )","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":398.07,"Distribucion":"Dismar[1]-Lider[2]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4021433,"Longitud":-78.8340083,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"19/06/2026","Doi":"75970605","Nombre":"DIONICIO VERÁ, ROLY ESYOMER                                                                         ","Descripcion":"LAS GARDENIAS MCDO NAZARETH PTO 09 EXTERIOR","Zona":"SAN JOSE - NUEVO CHAO","Total":808.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"76293862","Nombre":"VILLANUEVA RUIZ EDGAR                                                                               ","Descripcion":"MZ B6  LT 7 - SIEMBRAS DEL VALLE                                      ","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":173.65,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4032335,"Longitud":-78.8299402,"Placa":"T2I929","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"19/06/2026","Doi":"77281925","Nombre":"CRUZ ERAZO, CLEYDER                                                                                 ","Descripcion":"MZ N LTE 21 (CHARAPITO ) VICTOR RAÚL","Zona":"VICTOR RAUL - SIEMBRAS DEL VALLE","Total":172.32,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.4050445557,"Longitud":-78.8267211914,"Placa":"T2I929","Conductor":"TORRES ROJAS VICTOR"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"19/06/2026","Doi":"10094936689","Nombre":"CUESTAS ANDONAIRE, MELCHORA DEL ROCIO                                                               ","Descripcion":"TOPARPA 392 SANTA MARIA","Zona":"CHICAGO - SANTA MARIA","Total":339.71,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1184959,"Longitud":-79.0216575,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10178116474","Nombre":"RODRIGUEZ CASTAÑEDA MARIA EUGENIA                                                                   ","Descripcion":"CAL PARRA DEL RIEGO NRO258 URBPALERMO","Zona":"PALERMO - ARANJUEZ","Total":57.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1102943,"Longitud":-79.0158017,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10178408122","Nombre":"MIRANDA SHIMAJUKO JUDITH                                                                            ","Descripcion":"PARRA DEL RIEGO 467 PALERMO","Zona":"PALERMO - ARANJUEZ","Total":105.55,"Distribucion":"Dismar[2]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1114537,"Longitud":-79.0140297,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10179056882","Nombre":"BRISEÑO VASQUEZ PAULA                                                                               ","Descripcion":"SUCRE422BODEGAPAOLITA                                                 ","Zona":"CHICAGO - SANTA MARIA","Total":85.38,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1141752,"Longitud":-79.0206038,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10179121692","Nombre":"ALVARADO MENDOZA ELVA RUSMERY                                                                       ","Descripcion":"SUARES 367CHICAGO","Zona":"CHICAGO - SANTA MARIA","Total":137.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1129501,"Longitud":-79.0206237,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10179122885","Nombre":"VASQUEZ PAREDES MIRIAM YOLANDA                                                                      ","Descripcion":"DELFIN CORCUERA 277STA. MARIA","Zona":"CHICAGO - SANTA MARIA","Total":66.97,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1194783,"Longitud":-79.0226882,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10180816157","Nombre":"PESANTES GRADOS MONICA ELIZABETH                                                                    ","Descripcion":"JOSE GALVEZ 714 URB CHICAGO                                           ","Zona":"CHICAGO - SANTA MARIA","Total":45.58,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1145861,"Longitud":-79.0171833,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10181277331","Nombre":"ALFARO GUERRA ALBERTH FREY                                                                          ","Descripcion":"MDOMAYORISTAJ44                                                       ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":118.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10181296335","Nombre":"KONG GALVEZ SOCORRO DEL PILAR                                                                       ","Descripcion":"MANCO CAPAC 671 STA MARIA ","Zona":"CHICAGO - SANTA MARIA","Total":39.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1197063,"Longitud":-79.021949,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10181422837","Nombre":"CABREJOS GONZALES RUTH                                                                              ","Descripcion":"HUANCAVELICA321APALERMO                                               ","Zona":"PALERMO - ARANJUEZ","Total":35.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10181433359","Nombre":"GARCIA YRAITA RICHARD JHON                                                                          ","Descripcion":"TUPAC YUPANQUI # 436 SANTA MARÍA","Zona":"CHICAGO - SANTA MARIA","Total":61.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1177074,"Longitud":-79.0240642,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10181897703","Nombre":"RUIZ POLO ELIZA                                                                                     ","Descripcion":"ALBERTO URETA N 343 PALERMO","Zona":"PALERMO - ARANJUEZ","Total":380.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1091449,"Longitud":-79.0133355,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10409112434","Nombre":"PORTACARRERO HERNANDEZ DERLY                                                                        ","Descripcion":"FRANCISCO DE ZELA 715 CHICAGO                                         ","Zona":"CHICAGO - SANTA MARIA","Total":63.22,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1159434,"Longitud":-79.0194763,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10422281351","Nombre":"MARCHAND ASPAJO TARSIS LLERME                                                                       ","Descripcion":"AV CESAR VALLEJO 198 INTERIOR 3 ( FRENTE AL MCDO MAYORISTA)           ","Zona":"CHICAGO - SANTA MARIA","Total":936.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"10446452105","Nombre":"CHOLAN GIL ANGELA DENISSE                                                                           ","Descripcion":"SUAREZ 1023","Zona":"CHICAGO - SANTA MARIA","Total":115.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1167026,"Longitud":-79.015328,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17801175","Nombre":"PESANTES GRADOS, GUSTAVO RONALD                                                                     ","Descripcion":"PSTO 70 J B MERCADO MAYORISTA","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":66.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17802671","Nombre":"AZABACHE ANHUAMAN DE REYES MICAELA                                                                  ","Descripcion":"ZELA 821 CHICAGO                                                      ","Zona":"CHICAGO - SANTA MARIA","Total":80.04,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1152783,"Longitud":-79.0173717,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17849587","Nombre":"SALDAÑA LUNA JULIA ROSA                                                                             ","Descripcion":"PROL.EGUREN778CHICAGOTRUJILLOTRUJILLOTRUJILLO","Zona":"CHICAGO - SANTA MARIA","Total":362.48,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1163424,"Longitud":-79.0129163,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17857954","Nombre":"LEON DIAZ AURELIO APOLINAR                                                                          ","Descripcion":"SINCHI ROCA 1107ANEXO MAYORISTA                                       ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":237.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1107347,"Longitud":-79.0199021,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17861782","Nombre":"GUZMAN JAVES ERASMO                                                                                 ","Descripcion":"MCD MAYORISTA I 61  ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":93.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1117623,"Longitud":-79.0201428,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17864615","Nombre":"MARTHA MONICA MEDINA LUIS                                                                           ","Descripcion":"JOSE GALVEZ 660  CHICAGOTRUJILLOTRUJILLOTRUJILLO","Zona":"CHICAGO - SANTA MARIA","Total":110.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.11428,"Longitud":-79.0174317,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17867090","Nombre":"ROSAS REYES SANTOS                                                                                  ","Descripcion":"MCD MAYORISTA K 18 ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":84.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1123264,"Longitud":-79.0197414,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17889865","Nombre":"DIAZ MENDOZA JULIA                                                                                  ","Descripcion":"MCDO MAYORISTA PTO K  -06  PALERMO                                    ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":118.05,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17895981","Nombre":"GUERRA DE ALFARO FRANCISCA                                                                          ","Descripcion":"PTO K 78 MERCADO MAYORISTA                                            ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":151.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1117313,"Longitud":-79.0204112,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"17914946","Nombre":"LLONTOP MIRANDA VIRNA MARIA                                                                         ","Descripcion":"CALLE SUCRE 334 CHICAGO","Zona":"CHICAGO - SANTA MARIA","Total":192.51,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1136239,"Longitud":-79.0214865,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18010228","Nombre":"CRUZADO CASTRO ANGELITA AIDE                                                                        ","Descripcion":"STACRUZ602CHICAGOTRUJILLO","Zona":"CHICAGO - SANTA MARIA","Total":118.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1175083,"Longitud":-79.0152371,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18039569","Nombre":"VIGO ALFARO EDUARDO BALTAZAR                                                                        ","Descripcion":"SINCHIRROCA # 370                                                     ","Zona":"CHICAGO - SANTA MARIA","Total":341.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.114635,"Longitud":-79.023985,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18070330","Nombre":"MARTINEZ DE CABRERA CHARITO                                                                         ","Descripcion":"PTO I  63 MAYORISTA","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":98.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1116854,"Longitud":-79.0201375,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18078672","Nombre":"BACILIO SAAVEDRA CARMEN LUZ                                                                         ","Descripcion":"MCDO MAYORISTA PTO K 06","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":21.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1123196,"Longitud":-79.0195978,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18087017","Nombre":"GONZALEZ MEDINA MARIA                                                                               ","Descripcion":"MCDO. MAYORISTA PSTO. 37KTRUJILLOTRUJ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":414.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1119922,"Longitud":-79.0199913,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18094785","Nombre":"SÁNCHEZ RODRÍGUEZ OLINDA MERCEDES                                                                   ","Descripcion":"CALLE SUCRE 346 URB CHICAGO                                           ","Zona":"CHICAGO - SANTA MARIA","Total":51.9,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1136867,"Longitud":-79.0213967,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18107754","Nombre":"ABANTO MUÑOZ SEGUNDO TIMOTEO                                                                        ","Descripcion":"MERCADO MAYORISTA PASAJE I PUESTO 27","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":208.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1119618,"Longitud":-79.0197686,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18121324","Nombre":"URTEAGA  FLORES, ULISES  MARCELINO                                                                  ","Descripcion":"CALLE SUCRE 354 CHICAGO","Zona":"CHICAGO - SANTA MARIA","Total":97.92,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1138597,"Longitud":-79.0212619,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18142090","Nombre":"RODRIGUEZ SANCHEZ JAVIER ANTONIO                                                                    ","Descripcion":"SANTOS CHOCANO 617 PALERMO","Zona":"PALERMO - ARANJUEZ","Total":156.14,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1087617,"Longitud":-79.01546,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18147733","Nombre":"JAIME YAPUCHURA YAPUCHURA                                                                           ","Descripcion":"SINCHI ROCA 1109 PALERMO","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":133.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18150472","Nombre":"BACILIO SAAVEDRA, SANTOS  LUCIANA                                                                   ","Descripcion":"MERCADOMAYORISTAPSTOK8","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":40.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1121916,"Longitud":-79.0197385,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"18216980","Nombre":"MIRANDA ANTON MARIANO OMAR                                                                          ","Descripcion":"MCDO MAYORISTA PTO K 86","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":74.85,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1116084,"Longitud":-79.0205056,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"19058456","Nombre":"PEREZ GONZALES WILFREDO                                                                             ","Descripcion":"MCDMAYORISTAPTOK24","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":42.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.112229,"Longitud":-79.0198553,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"19212684","Nombre":"ORTIZ CABRERA MARIA AGUSTINA                                                                        ","Descripcion":"CALLE CAMINO CALDERÓN 462  PALERMO","Zona":"PALERMO - ARANJUEZ","Total":55.85,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1113737,"Longitud":-79.0150984,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"20600132467","Nombre":"COMERCIALIZADORA LOMER S.A.C.                                                                       ","Descripcion":"AV.RICARDOPALMANRO.312URB.PALERMO","Zona":"PALERMO - ARANJUEZ","Total":897.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1112816,"Longitud":-79.0164389,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"20603807112","Nombre":"INVERSIONES EL GORDITO COSME S.R.L.                                                                 ","Descripcion":"AV. RICARDO PALMA NRO. 122 URB. PALERMO","Zona":"PALERMO - ARANJUEZ","Total":76.81,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1105024,"Longitud":-79.0174209,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"20610347038","Nombre":"COMERCIAL EKATEPA E.I.R.L.                                                                          ","Descripcion":"JR. SUÁREZ 728 URB. CHICAGO","Zona":"CHICAGO - SANTA MARIA","Total":55.55,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1152042,"Longitud":-79.0175578,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"20613647385","Nombre":"VENTANITA S.A.C.                                                                                    ","Descripcion":"CAPAC YUPANQUI 219","Zona":"CHICAGO - SANTA MARIA","Total":340.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1199893,"Longitud":-79.0230582,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"40118672","Nombre":"COSANATAN AGUILAR MIRTHA DANY                                                                       ","Descripcion":"PSTO: I 68 MERCADO MAYORISTA INTERIOR                                 ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":34.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1114608,"Longitud":-79.0203763,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"41520689","Nombre":"ALFARO SIMON WILMER                                                                                 ","Descripcion":"MERCADO MAYORISTA PTO K - 86                                          ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":118.92,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.111711,"Longitud":-79.0204002,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"41694973","Nombre":"CRUZ SALVADOR SANTOS                                                                                ","Descripcion":"JOSEGALVEZ420 CHICAGO                                                 ","Zona":"CHICAGO - SANTA MARIA","Total":336.12,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1129451,"Longitud":-79.01972,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"42310023","Nombre":"CIPRIANO LEZAMA NANCY MARIBEL                                                                       ","Descripcion":"MCDO MAYORISTA PTOJ 84  ","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":109.86,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1115447,"Longitud":-79.0203577,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"44599894","Nombre":"KUJA ANJIS, RICHARD                                                                                 ","Descripcion":"CALLE HUAYNA CAPAC 263 URB SANTA MARÍA","Zona":"CHICAGO - SANTA MARIA","Total":246.45,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1154804,"Longitud":-79.0239731,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"45165218","Nombre":"GABRIEL PAREJA MEDALID INGRID                                                                       ","Descripcion":"SANTA CRUZ 337 URB CHICAGO                                            ","Zona":"CHICAGO - SANTA MARIA","Total":61.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1167837,"Longitud":-79.0175755,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"46137306","Nombre":"CERCADO CHACON ERLINDA                                                                              ","Descripcion":"MERCADO ANEXO LL 17","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":118.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1107959,"Longitud":-79.0199428,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"72772269","Nombre":"ALTAMIRANO TORRES LITHA GEOVANNI                                                                    ","Descripcion":"ZELA 551 CHICAGO                                                      ","Zona":"CHICAGO - SANTA MARIA","Total":54.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1146337,"Longitud":-79.0191655,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"74024620","Nombre":"QUIROZ CARRERA JENNIFER JULIA                                                                       ","Descripcion":"GÁLVEZ 787 CHICAGO                                                    ","Zona":"CHICAGO - SANTA MARIA","Total":43.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1151691,"Longitud":-79.0168089,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"76303832","Nombre":"CENAS  GARCIA, HEBER  DAVID                                                                         ","Descripcion":"MCDO MAYORISTA PTO H - 15","Zona":"MCDO ZONAL PALERMO [MAYORISTA]","Total":1263.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.1120822,"Longitud":-79.0195928,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"19/06/2026","Doi":"76468009","Nombre":"CAIPO CRUZ LUCERITO                                                                                 ","Descripcion":"HUAINA CAPAC 211 SANTA MARIA","Zona":"CHICAGO - SANTA MARIA","Total":117.44,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1154233,"Longitud":-79.0240317,"Placa":"T2J815","Conductor":"LAZARO VASQUEZ, JORGE WILDER"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

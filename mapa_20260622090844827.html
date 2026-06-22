@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"20/06/2026","Doi":"01020551","Nombre":"ACOSTA  VELA, WILMA                                                                                 ","Descripcion":"JR.JOSE OLAYA 948 BARRIO QUINAPATA","Zona":"RIOJA 2","Total":145.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"01035113","Nombre":"BURGA CHAMAYA, ELISA                                                                                ","Descripcion":"ESQ. JR. LIBERTAD/JR. STA. ROSA - NVA. CAJAMARCA","Zona":"NVA CAJ - MAYORISTA","Total":3990.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20601664829","Nombre":"JHAPSA BUSINESS S.A.C.                                                                              ","Descripcion":"PSJ. 7 DE JUNIO 125","Zona":"NARANJOS","Total":312.47,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.7370842,"Longitud":-77.5043096,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20608231707","Nombre":"GRUPO SABADO S.R.L.                                                                                 ","Descripcion":"JR. CAJAMARCA MZA. 20 LOTE. 18 P.J. NUEVA CAJAMARCA","Zona":"NVA CAJ - MAYORISTA","Total":92.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.9438314,"Longitud":-77.3062944,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20609518791","Nombre":"INVERSIONES ALEXANDER & CIA S.R.L.                                                                  ","Descripcion":"AV. CAJAMARCA NRO. 588","Zona":"NARANJOS","Total":500.35,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.7377065,"Longitud":-77.5046425,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20611832002","Nombre":"SUPERMERCADO VALLE DEL ALTOMAYO E.I.R.L.                                                            ","Descripcion":"JR. PIURA NRO. 528","Zona":"NVA CAJ - MAYORISTA","Total":1514.79,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.9408952,"Longitud":-77.3084992,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20611993626","Nombre":"MINI MARKET RIOJA E.I.R.L.                                                                          ","Descripcion":"JR. DOS MAYO NRO. 541 (FRENTE AL MERCADO CENTRAL)","Zona":"RIOJA - MAYORISTA","Total":4159.24,"Distribucion":"Dismar[2]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"20613951742","Nombre":"INVERSIONES CONTRERAS & SCP S.A.C.                                                                  ","Descripcion":"AV. REYES MAGOS NRO. SN OTR. DAMASCO","Zona":"NVA CAJ - MAYORISTA","Total":5676.89,"Distribucion":"Dismar[2]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"27058610","Nombre":"ARRIBASPLATA INFANTE, PERCY WILLIAM                                                                 ","Descripcion":"MERCADO MUNICIPAL PUESTO 01 - SEGUNDA JERUSALEN","Zona":"2DA JERUSALEN","Total":5450.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"27728094","Nombre":"ARAUJO CORDOVA, MARIZOL                                                                             ","Descripcion":"JR.AMAZONAS S/N -NARANJOS","Zona":"NARANJOS 1","Total":2618.16,"Distribucion":"Dismar[2]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.8043743,"Longitud":-77.3983946,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"27830691","Nombre":"ROQUE NICUDEMUS, JULIA                                                                              ","Descripcion":"AV.ACARRETERA FERNANDO B. TERY S/N","Zona":"NARANJILLO","Total":3189.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.7379646,"Longitud":-77.5048569,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"40259604","Nombre":"DIAZ  GUEVARA, OLINDA                                                                               ","Descripcion":"MERCADO NVO.CJA.JOSE OLAYA PTO.61-62","Zona":"NVA CAJ 3-MCDO J.OLAYA","Total":1650.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"40380399","Nombre":"ACUÑA PEREZ, WILDER                                                                                 ","Descripcion":"MERCADO CENTRAL ENTRADA AL JR.PIURA","Zona":"NVA CAJ 3-MCDO J.OLAYA","Total":34.47,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"43381927","Nombre":"MEGO  DIAZ, DILCIA                                                                                  ","Descripcion":"MCDO. DE ABASTOS NARANJOS PSTO. NO. 172- PARDO MIGUEL","Zona":"NARANJOS 1","Total":1110.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.8035295,"Longitud":-77.3993677,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"43547258","Nombre":"DAVILA PERALES NER JHONATHAN                                                                        ","Descripcion":"JR.BOLOGNESI 167-NVO.CAJAMARCA","Zona":"NVA CAJ 3-MCDO J.OLAYA","Total":3504.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"44156236","Nombre":"SALDAÑA VERA, DEYSI                                                                                 ","Descripcion":"PASAJE 7 DE JUNIO  CDRA1 - REF (VIPMA)","Zona":"NARANJOS 1","Total":362.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"44456234","Nombre":"CHANTA VALENCIA, MANFREDY                                                                           ","Descripcion":"CARRET. FERNANDOB.TERRY - NARANJILLO","Zona":"NARANJILLO","Total":112.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"45562510","Nombre":"BAZAN ALTAMIRANO, JACTSEL MAXWEL                                                                    ","Descripcion":"CARRETERA UCRANIA CDRA 1 (SRA. ELIZABET)","Zona":"NVA CAJ - MAYORISTA","Total":2044.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"45832416","Nombre":"BARBOZA OLIVOS YANETH MARISOL                                                                       ","Descripcion":"JR.AMAZONAS-NARANJILLO","Zona":"NARANJILLO","Total":147.97,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"45864834","Nombre":"ACOSTA VASQUEZ, SHIRLEY FIORELLA                                                                    ","Descripcion":"JR. LUIS LINARES CDRA. 2-CRUCE CON IQUITOS","Zona":"RIOJA 2","Total":54.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"46121515","Nombre":"VASQUEZ SOBERON, ROSALIA                                                                            ","Descripcion":"AV. MARIA PARADO DE BELLIDO - NARANJILLO","Zona":"NARANJILLO","Total":858.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.8044955,"Longitud":-77.3983217,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"46286292","Nombre":"SILVA VASQUEZ, ELVA                                                                                 ","Descripcion":"CARRT. UCRANIA C- 3  NUEVO CAJAMARCA","Zona":"NVA CAJ - MAYORISTA","Total":574.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.940758,"Longitud":-77.3025747,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"46363311","Nombre":"MEDINA LOZADA, VALERIA                                                                              ","Descripcion":"JR. AMAZONAS - REF(FRENTE A NEGOCIOS CALIDAD)","Zona":"NARANJOS 1","Total":112.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"46665050","Nombre":"BACA VASQUEZ, NURIY                                                                                 ","Descripcion":"CARRETERA UCRANEA S/N NVA. CAJAMARCA","Zona":"NVA CAJ 3-MCDO J.OLAYA","Total":69.32,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.9862569,"Longitud":-77.2815247,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"47611030","Nombre":"BARRIENTOS RUBIO, JENNY                                                                             ","Descripcion":"MERCADO SINAI #16-2DA. JERUSALEN","Zona":"2DA JERUSALEN - MCDOS","Total":1110.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.9862358,"Longitud":-77.2815373,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"48215403","Nombre":"CONSTANTINO CARRASCO, MILY ROSA                                                                     ","Descripcion":"JR. AMAZONAS C-2 - NARANJOS","Zona":"NARANJOS 1","Total":83.88,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"48877715","Nombre":"DIAZ ADRIANZEN, CRISTIAN EDINSON                                                                    ","Descripcion":"PSJ. 7 DE JULIO S/N","Zona":"NARANJOS","Total":240.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"LOYOLA  YBAÑEZ, HUGO  COMBER","Latitud":-5.7370515,"Longitud":-77.5043132,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"70156525","Nombre":"GUEVARA VASQUEZ, LELY MARIBEL                                                                       ","Descripcion":"JR. AMAZONAS S/N - NARANJILLO","Zona":"NARANJILLO","Total":83.88,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"},{"FechaCc":"20/06/2026","Doi":"75673587","Nombre":"DELGADO AVELLANEDA, VILMER LEODAN                                                                   ","Descripcion":"JR MICAELA BASTIDAS CDRA 4 (NEGOCIOS LEO) - NARANJILLO","Zona":"NARANJILLO","Total":114.97,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SUAREZ BECERRA, JORGE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T5V877","Conductor":"AGAPITO SANGAMA, SINARAHUA"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

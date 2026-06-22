@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"20/06/2026","Doi":"00897385","Nombre":"CORONEL MURRIETA, KELLY                                                                             ","Descripcion":"STA INES 595","Zona":"HUAYCO 1","Total":27.92,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"00925003","Nombre":"SHAPIAMA REATEGUI, ISABEL                                                                           ","Descripcion":"JR. AMERICA # 331","Zona":"HUAYCO 1","Total":87.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01061958","Nombre":"ARTEVALO RENGIFO, LUDITH                                                                            ","Descripcion":"PSJ. LOS MANGOS 283","Zona":"HUAYCO 4","Total":39.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01069094","Nombre":"MACEDO AREVALO, MARIA LUANI                                                                         ","Descripcion":"RICARDO PALMA 744","Zona":"HUAYCO 1","Total":85.82,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01069559","Nombre":"SANGAMA SANGAMA, FELICINDA                                                                          ","Descripcion":"JR. CENEPA 752","Zona":"HUAYCO 4","Total":37.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01071692","Nombre":"TUESTA CHISTAMA, DOLLY                                                                              ","Descripcion":"JORGE CHAVEZ 621","Zona":"HUAYCO 1","Total":32.7,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01108831","Nombre":"GOMEZ  DE AGUILAR, PAQUITA                                                                          ","Descripcion":"JR. GARCILAZO DE LA VEGA 148","Zona":"HUAYCO 4","Total":56.03,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01116257","Nombre":"GARCIA CASTRO, MARGARITA                                                                            ","Descripcion":"JR. RAMON CASTILLA 757","Zona":"HUAYCO 4","Total":56.81,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01121725","Nombre":"BARTRA CORAL, DANIA                                                                                 ","Descripcion":"JR. ALFONSO UGARTE 186","Zona":"HUAYCO 4","Total":37.32,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01122083","Nombre":"MEGO  DEL AGUILA, RITA                                                                              ","Descripcion":"JR LIBERTAD 433","Zona":"HUAYCO 1","Total":28.58,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01139619","Nombre":"FLORES RAMIREZ, PILAR                                                                               ","Descripcion":"JR. JORGE CHAVEZ 583","Zona":"HUAYCO 1","Total":36.91,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01146998","Nombre":"CISNEROS REATEGUI, JENNY                                                                            ","Descripcion":"JR. LOS PINOS #207","Zona":"HUAYCO 4","Total":38.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01157130","Nombre":"CAMPOS ARCOS CRISANTO HIPOLITO                                                                      ","Descripcion":"RICARDO PALMA Nª 801 - HUAYCO","Zona":"HUAYCO 1","Total":49.8,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"01157645","Nombre":"AZANG MELENDEZ, LIONEL                                                                              ","Descripcion":"ES: PS: TRUJILLO NRO.185","Zona":"HUAYCO 1","Total":55.06,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"10410379550","Nombre":"GUEVARA MERA, CONSUELO                                                                              ","Descripcion":"JR. PRÓCERES NO 379 - HUAYCO","Zona":"HUAYCO 4","Total":110.37,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"10420850595","Nombre":"GARCIA  DEL AGUILA, JESSICA PAOLA                                                                   ","Descripcion":"TAHUANTINSUYO 252","Zona":"HUAYCO 1","Total":33.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"10709966290","Nombre":"SORIA CORAL, DI ANGELLO                                                                             ","Descripcion":"JR. MARTINEZ DE COMPAGÑON NRO. 954","Zona":"HUAYCO 4","Total":43.74,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"40792015","Nombre":"INUMA SATALAYA , CLARIS                                                                             ","Descripcion":"PROLONG. LIBERTAD 156","Zona":"HUAYCO 1","Total":37.42,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"42531653","Nombre":"SALAZAR CASTAÑEDA, CARMEN                                                                           ","Descripcion":"JR. RAMON CASTILLA 711","Zona":"HUAYCO 4","Total":173.28,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"43253264","Nombre":"VIVANCO PELAEZ, ANA ISABEL                                                                          ","Descripcion":"JR VICTOR ANDRES BELAUNDE 161","Zona":"HUAYCO 4","Total":29.83,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"44245312","Nombre":"RIVERA CORDOBA, VANESA                                                                              ","Descripcion":"JORGE CHAVEZ 453","Zona":"HUAYCO 1","Total":64.83,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"46182610","Nombre":"CABALLERO CASTRO, VIVIS ROSARIO                                                                     ","Descripcion":"JR VÍCTOR ANDRES BELAUNDE  #252","Zona":"HUAYCO 4","Total":56.03,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"71721560","Nombre":"ALFARO PISCO, MAGALY                                                                                ","Descripcion":"JR. NOGALES 190","Zona":"HUAYCO 4","Total":37.32,"Distribucion":"Dismar[1]-Lider[0]","Rv":"DEL AGUILA ARMAS, CRISTIAN","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"},{"FechaCc":"20/06/2026","Doi":"73052043","Nombre":"GARCIA TORRES, JULIE MELINA                                                                         ","Descripcion":"JR PROLONGACIÒN JUAN VARGAS 124","Zona":"HUAYCO 1","Total":39.88,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ARELLANO BOCANEGRA, ROHALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C842","Conductor":"SALIRROSAS SANCHEZ, JOSE HERIBERTO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

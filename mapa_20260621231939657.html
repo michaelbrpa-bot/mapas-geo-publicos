@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"20/06/2026","Doi":"10178403066","Nombre":"VELEZMORO BENITES DE HILARIO SANDRA LEONILA                                                         ","Descripcion":"MZA. C' LOTE 32 URB. MONSERRATE 3RA ETAPA TRUJILLO (BAZAR EL ANGEL)   ","Zona":"MONSERRATE","Total":41.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1223935,"Longitud":-79.0343118,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10178918431","Nombre":"HERRERA DE MARREROS AURIA EMERITA                                                                   ","Descripcion":"MZ Ñ LOTE 4 PUEBLO JOVEN MONSERRATE ","Zona":"MONSERRATE","Total":85.47,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.124063,"Longitud":-79.0339544,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10179283480","Nombre":"LLAPO PTINOANO SANTOS                                                                               ","Descripcion":"LUCIO SENECA 590 NORIA                                                ","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":76.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1002551,"Longitud":-79.0074411,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10180212278","Nombre":"HUAMAN  MIRANDA , ADELA  MARIA                                                                      ","Descripcion":"AV SANTA TERESA DE JESUS D LT 1URB MONSERRATE","Zona":"MONSERRATE","Total":96.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1223301,"Longitud":-79.0335688,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10180743591","Nombre":"ZAVALETA GONZALES, ROBERT JULIO                                                                     ","Descripcion":"MZ D LT 5 MONSERRATE 1 ERA ETAPA","Zona":"MONSERRATE","Total":124.69,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1234768,"Longitud":-79.0328137,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10181770096","Nombre":"AZABACHE GUTIERREZ DE SOTO JANET IVON                                                               ","Descripcion":"AV TERESA DE JESUS MZ P LOTE 6 MONSERRA ","Zona":"MONSERRATE","Total":87.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1234317,"Longitud":-79.0308036,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10407366650","Nombre":"GAMBOA CRUZ DENIS MAGALI                                                                            ","Descripcion":"MCD UNION  75A                                                        ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":151.11,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1054664,"Longitud":-79.0210473,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10458099508","Nombre":"VILLANUEVA HERRERA GEANNIA JIVVEL                                                                   ","Descripcion":"AV.CESAR VALLEJO NRO.1494 URB.RAZURI","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":3081.31,"Distribucion":"Dismar[1]-Lider[2]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0999097,"Longitud":-79.0085179,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10701879894","Nombre":"GUTIERREZ VEGA, JURGEN YOEL                                                                         ","Descripcion":"SALAZAR BONDY 568 MINI MARKET GALAXI","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":181.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1010852,"Longitud":-79.0087954,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10703628147","Nombre":"LEON LLONTOP GIUSSEPPE AGUSTIN                                                                      ","Descripcion":"CALLE ARGELIA MZ F LT 8 MONSERRATE                                    ","Zona":"MONSERRATE","Total":50.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.120481,"Longitud":-79.0329629,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10729805012","Nombre":"MORALES ZIMIC, KRISTEL KARÍN                                                                        ","Descripcion":"ARISTÓTELES 243 LA NORIA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":141.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1048781,"Longitud":-79.0095873,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"10742835320","Nombre":"PEREZ RODRIGUEZ, ANA PAULA                                                                          ","Descripcion":"CALLE TAIWAN MZ Q LT 17 URB MONSERRATE","Zona":"MONSERRATE","Total":72.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1252325,"Longitud":-79.0321647,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"15615676","Nombre":"CASTILLO PAREDES, FANNY  LUCILA                                                                     ","Descripcion":"CALLE ARISTÓTELES S/N ( BODEGA FANYLU - FRENTE AL COLEGIO)","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":54.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1054259,"Longitud":-79.0085756,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17812493","Nombre":"SOLON SIMON EDILBERTA                                                                               ","Descripcion":"MCDO LANORIA PTO 108 LANORIA            ","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":54.75,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1045568,"Longitud":-79.0099677,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17868166","Nombre":"CIUDAD BENITES JORGE                                                                                ","Descripcion":"MZ K LTE 12 PJE IRAK(CERCA CLÍNICA S. PABLO                           ","Zona":"MONSERRATE","Total":33.45,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1218123,"Longitud":-79.0331645,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17889781","Nombre":"CALDERON DE PELAEZ, MARÍA ANA                                                                       ","Descripcion":"MERCADO UNION 52 (PUERTA 11)","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":43.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1051479,"Longitud":-79.0213489,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17896932","Nombre":"MONZON VASQUEZ DORALIZA                                                                             ","Descripcion":"MERADO UNION PTO 139 ( PASAJE AGUAYTIA)PUERTA 8                       ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":37.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1051059,"Longitud":-79.0208191,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17917176","Nombre":"ROJAS DE MARIN CARMEN CARMELA                                                                       ","Descripcion":"MCDO.UNIONPTO.377BLOQUEA","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":189.16,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17921505","Nombre":"SAAVEDRA RIVERO, ROSA                                                                               ","Descripcion":"MCDO UNION PSTO A 85-86","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":118.05,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17945751","Nombre":"CARRANZA VELASQUEZ, ANITA AZUCENA                                                                   ","Descripcion":"MCDO MARIBEL PTO C-1  LA NORIA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":297.24,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1014279,"Longitud":-79.0097656,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17964202","Nombre":"SANCHEZ CHAVEZ MIRIAN                                                                               ","Descripcion":"MCDO LA NORIA PTO 63 NORIA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":96.07,"Distribucion":"Dismar[2]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1044679,"Longitud":-79.010037,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"17973563","Nombre":"DOMINGUEZ MESTANZA PETRONILA                                                                        ","Descripcion":"MCDOLANORIAPTO22TRUJILLOTRUJILLOTRUJILLO","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":40.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1044516,"Longitud":-79.0100241,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18096312","Nombre":"LUCIANO CASTILLO RICHARD AMADO                                                                      ","Descripcion":"MDO LA UNION PTO 1377TRUJILLO","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":49.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1048736,"Longitud":-79.0212426,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18109187","Nombre":"NEYRA DIAZ HILDA GLAYS                                                                              ","Descripcion":"PTO 917 C MDO UNIONTRUJILLO","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":211.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18130568","Nombre":"BRICEÑO VILLALOBOS ALICIA RENEE                                                                     ","Descripcion":"MZ C 8 PASAJE  ANGOLA  MONSERRATE                                     ","Zona":"MONSERRATE","Total":186.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1220597,"Longitud":-79.0336535,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18142657","Nombre":"YUPANQUI INFANTES MONICA                                                                            ","Descripcion":" AV HUSARES DE JUNÍN 625 (FERRETERIA DORITA)                          ","Zona":"MONSERRATE","Total":149.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1214221,"Longitud":-79.033844,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18173420","Nombre":"SAONA AGUILAR JUANA ROCIO DEL PILAR                                                                 ","Descripcion":"MZ.U LOT 5 MONSERRATE ETAPA (PARQUE REGATAS)                          ","Zona":"MONSERRATE","Total":330.5,"Distribucion":"Dismar[0]-Lider[2]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1261497,"Longitud":-79.0316091,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18180355","Nombre":"MEREGILDO HERRERA DE MANTILLA MARIA TEODULINA                                                       ","Descripcion":"MDO LA NORIA PTO.67 LA NORIA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":39.96,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"18188889","Nombre":"RODRIGUEZ CABANILLAS VICTOR SAMUEL                                                                  ","Descripcion":"MZ K LT 01 URB MONSERRATE                                             ","Zona":"MONSERRATE","Total":35.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1219523,"Longitud":-79.0327901,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"19029839","Nombre":"REYES CERNA ANA JESUS                                                                               ","Descripcion":"MCDO.NORIAPTO.60LANORIA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":24.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.104371,"Longitud":-79.010014,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"20602239269","Nombre":"MINI MARKET MONSERRATE E.I.R.L.                                                                     ","Descripcion":"CAL.SANTA T DE JESUS MZA. A1 LOTE. 3 URB                              ","Zona":"MONSERRATE","Total":131.82,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1226676,"Longitud":-79.03266,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"20606148730","Nombre":"GERALDVG S.A.C.                                                                                     ","Descripcion":"MZA. A' LOTE. 26 URB. MONSERRATE III ETAPA","Zona":"MONSERRATE","Total":112.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1225981,"Longitud":-79.0322852,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"20614333953","Nombre":"TOMATE MARKET S.A.C.                                                                                ","Descripcion":"AV. SANTA TERESA DE JESUS NRO. 585 URB. MONSERRATE","Zona":"MONSERRATE","Total":75.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1232483,"Longitud":-79.0286604,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"27172267","Nombre":"ESCOBAR POLO, HUBERSON  ROSMEL                                                                      ","Descripcion":"LUCIO SENECA  1396 FRENTE A FERRETERÍA PAPILON","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":231.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1006966,"Longitud":-79.0091588,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"40665696","Nombre":"RODRIGUEZ ALVAREZ, CATHERINE  JUDITH                                                                ","Descripcion":"MZ F LT 5 URB LA ALAMEDA","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":197.66,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"41544587","Nombre":"MONTERO JIMÉNEZ MARÍA SUSANA                                                                        ","Descripcion":"PTO A-374 MDO UNION                     ","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":153.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1053275,"Longitud":-79.0213678,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"41731193","Nombre":"ALAYO SALVATIERRA ROCÍO                                                                             ","Descripcion":"SALAZAN BONDY 693 RAZURI                                              ","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":32.46,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1016072,"Longitud":-79.0080332,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"42155953","Nombre":"SALAS AGUILAR . PASCUALA ISABEL                                                                     ","Descripcion":"MZ E LOTE 19 MONSERRATE                 ","Zona":"MONSERRATE","Total":50.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1247007,"Longitud":-79.0339394,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"43042612","Nombre":"MARIN ROJAS SARITA                                                                                  ","Descripcion":"MERCADO UNION PTO 1050 C","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":719.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1054889,"Longitud":-79.0213922,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"43154322","Nombre":"GONZALES CASTILLO FANNY                                                                             ","Descripcion":"PSTO 40 MCDO EULALIA LA NORIA           ","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":97.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.102452,"Longitud":-79.0106721,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"44779786","Nombre":"GRACILIANO MEREGILDO, MARIA ROSA                                                                    ","Descripcion":"MERCADO LA NORIA 110","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":79.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE, BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"44788251","Nombre":"BARTOLO GARCIA EMERITA SILVIA                                                                       ","Descripcion":"AV SANTA TERESA DE JESUS  MZ D LT 12-B MONSERRATE","Zona":"MONSERRATE","Total":79.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1223414,"Longitud":-79.0335162,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"46816265","Nombre":"MANTILLA GOMEZ FLOR                                                                                 ","Descripcion":"MERCADO LA NORIA 57                                                   ","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":200.7,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1049281,"Longitud":-79.0094462,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"46976886","Nombre":"INCHAUSTEGUI VALVERDE, MAGNA                                                                        ","Descripcion":"PTO A-24/25 MDO UNIÓN.( PTO DE COMIDA)","Zona":"MCDO UNION - INTENDENCIA - MOLINO","Total":107.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1055758,"Longitud":-79.0209475,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"48642775","Nombre":"SIFUENTES ALTAMIRANO MERY CAROLINA                                                                  ","Descripcion":"HUSARES DE JUNIN 971 ( MARISCOS DEL AMOR) BOD. BAZAR HUSARES","Zona":"MONSERRATE","Total":35.77,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.12421,"Longitud":-79.034975,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"72212746","Nombre":"HUAMAN SALAZAR ELIANA ISAMAR                                                                        ","Descripcion":"MZ 0 LTE 22  PJE TAIWAN III ET MONSERRAT                              ","Zona":"MONSERRATE","Total":40.13,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1246433,"Longitud":-79.0329667,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"},{"FechaCc":"20/06/2026","Doi":"74037427","Nombre":"GUTIERREZ GOMEZ, MARYORI BRIGGITTE                                                                  ","Descripcion":"MERCADO LA NORIA NRO.4","Zona":"LA NORIA - ALAMEDA - MCDO LA NORIA","Total":429.14,"Distribucion":"Dismar[2]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.1045896,"Longitud":-79.0101469,"Placa":"T1A946","Conductor":"CENAS TANTAQUISPE BRAYAN ERIC"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

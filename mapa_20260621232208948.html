@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"20/06/2026","Doi":"10445906897","Nombre":"ZAPATA RAMIREZ MARISSELA ELIZABETH                                                                  ","Descripcion":"MZ-ELT-04-A UBR. SAN SEBASTIAN","Zona":"CHEPEN RECODO","Total":77.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"10451968233","Nombre":"SERRANO ROMERO VERONICA MILAGROS                                                                    ","Descripcion":"G.CACEDA 1906 -- CHEPEN","Zona":"CHEPEN RECODO","Total":211.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"18224313","Nombre":"AGUILAR  HUAMAN, MARIBEL                                                                            ","Descripcion":"INTERIOR DEL MERCADO CENTRAL 285","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":168.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19201928","Nombre":"MONCADA CABANILLAS OLINDA ROSA                                                                      ","Descripcion":"PARADA CENTRAL3-CHEPEN","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":43.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19202980","Nombre":"BRINGAS RUIZ LUIS GONZALO                                                                           ","Descripcion":"INT.PARADA CENTRAL PST 107","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":74.7,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19203024","Nombre":"BECERRA CABRERA BLANCA                                                                              ","Descripcion":"LA RIVERA310 CHEPEN","Zona":"CHEPEN RECODO","Total":177.64,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19206081","Nombre":"BAZAN DIAZ ANA                                                                                      ","Descripcion":"INT.MDO.CENTRAL PSTO46 CHEPEN","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":54.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19207012","Nombre":"CASTAÑEDA  MENDOZA, JAIME                                                                           ","Descripcion":"CLL PROGRESO PUESTO14","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":30.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19321924","Nombre":"HUANGAL PEREZ MARLIN ERLITA                                                                         ","Descripcion":"JR SUCRE381-CHEPEN","Zona":"CHEPEN RECODO","Total":317.14,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19329434","Nombre":"CHUQUICAJAS CASTILLO FLOR                                                                           ","Descripcion":"CALLEJON CHEPEN MZ-A 310-CHEPEN","Zona":"CHEPEN RECODO","Total":402.35,"Distribucion":"Dismar[1]-Lider[2]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19329557","Nombre":"ORTIS PAREDES, GLADIS                                                                               ","Descripcion":"MERCADO PUESTO DE COMIDA 301/305","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":41.04,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19331318","Nombre":"ACUÑA  ALAYO, ADELINA                                                                               ","Descripcion":"PUESTO C - 26 MERCADO N° 2","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":405.6,"Distribucion":"Dismar[2]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19331342","Nombre":"BARDALES VASQUEZ, ROSA ELIZABETH                                                                    ","Descripcion":"MERCADO LA ESPLANADA PABELON I-15 CHEPEN","Zona":"GUADALUPE TALLA I-CAFETAL","Total":112.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"19337457","Nombre":"CHAVARRY MENDOZA JOSE                                                                               ","Descripcion":"JR.PIEROLA STAND3-FRTE MCDO CENTRAL-CHEPEN","Zona":"GUADALUPE TALLA I-CAFETAL","Total":80.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"20481975400","Nombre":"JESUS ES MI SALVADOR S.A.C.                                                                         ","Descripcion":"CLL. PROGRESO992-CHEPEN","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":220.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"20/06/2026","Doi":"27990769","Nombre":"CHUQUILIN BECERRA ADELINDA                                                                          ","Descripcion":"AV.GONZALES CACEDA2236-CHEPEN","Zona":"CHEPEN RECODO","Total":57.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"41611794","Nombre":"MURILLO  CERNA, JULY                                                                                ","Descripcion":"EXPLANADA EL HUECO B 2","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":70.56,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"42816527","Nombre":"DAVILA HERNANDEZ, JESSICA                                                                           ","Descripcion":"PROGRESO  955","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":135.6,"Distribucion":"Dismar[2]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"43382380","Nombre":"BARBOZA  HERNANDEZ , FRANCO  ALEX                                                                   ","Descripcion":"CLL PROGRESO PUESTO 17","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":53.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"43821304","Nombre":"SANTILLAN GUILLERMO, ERIKA EVELYN                                                                   ","Descripcion":"EXPLANADA PABELLON B 06 CHEPEN","Zona":"GUADALUPE TALLA I-CAFETAL","Total":95.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"20/06/2026","Doi":"45129118","Nombre":"SILUPU CARHUATANTA, MARIA                                                                           ","Descripcion":"MERCADO CENTRAL PUESTO #10","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":38.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"46667471","Nombre":"SUAREZ VENTURA ROSA MARIBEL                                                                         ","Descripcion":"CLL PROGRESO PUESTO 16","Zona":"GUADALUPE TALLA I-CAFETAL","Total":63.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"47585626","Nombre":"PISFIL SANTA MARIA , VERONICA                                                                       ","Descripcion":"MERCADO CLL SAN PEDRO PUESTOB 297 - CHEPEN","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":80.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"72736348","Nombre":"CUSQUISIVAN  LLANOS, BENDA                                                                          ","Descripcion":"LA PARADA PUESTO 1","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":28.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"73976617","Nombre":"VARGAS CRISOLOGO, FLOR DE LIZ                                                                       ","Descripcion":"Mercado puesto 276 /277 Mercado calle san Pedro","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":100.89,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"74526140","Nombre":"ESCALANTE  CABANILLAS , SHEYLA                                                                      ","Descripcion":"CALLE PROGRESO 954","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":152.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"20/06/2026","Doi":"80493736","Nombre":"ABRAMONTE CALDERON , SEGUNDO                                                                        ","Descripcion":"CLL PROGRESO 810","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":33.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MARTINEZ JIMENEZ, MAYRA","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"20/06/2026","Doi":"80537767","Nombre":"LLENQUE FERNANDEZ, WILLER                                                                           ","Descripcion":"EXPLANADA PUESTO 18","Zona":"CHEPEN MAYORISTA,MERCADOS","Total":293.1,"Distribucion":"Dismar[1]-Lider[3]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

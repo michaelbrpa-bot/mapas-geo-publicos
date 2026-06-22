@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"20/06/2026","Doi":"00911311","Nombre":"PINEDO GONZALES, ADELA                                                                              ","Descripcion":"JR. JOSE CARLOS MARIATEGUI MZ. 25 LT4","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":50.58,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":-6.5072466,"Longitud":-76.3471808,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01068552","Nombre":"PINCHY TANANTA, BLANCA                                                                              ","Descripcion":"PASAJE LEONCIO PRADO-141","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":40.82,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01089357","Nombre":"GARCIA GARCIA, MARGARITA                                                                            ","Descripcion":"JR. SANTA ROSA Nº 237","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":53.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01104015","Nombre":"FLORES RODRIGUEZ, AIDA                                                                              ","Descripcion":"JR. LAS DALIAS MZ. H LT. 26","Zona":"BANDA DE SHILCAYO 3 - IZQUIERDA*","Total":32.26,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01104037","Nombre":"DEL AGUILA MURRIETA, TERESA                                                                         ","Descripcion":"JR  SANTA BARBARA MZ D LT 15  - BANDA DE SHILCAYO","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":59.26,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01118025","Nombre":"GONZALES RENGIFO, NEY                                                                               ","Descripcion":"JR. PROLONGACION RECREO 320","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":35.86,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01120204","Nombre":"CIEZA TORRES MANUELA                                                                                ","Descripcion":"JR.SAN MARTIN 202-LAS FLORES-BDA.SHILCAYO","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":13.98,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01123484","Nombre":"VILCHEZ VIERA, SEGUNDO                                                                              ","Descripcion":"JR. 20 DE NOVIEMBRE Mz. 13 Lt. 09","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":53.06,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01132185","Nombre":"ALBUJAR LOPEZ, ROSMERY                                                                              ","Descripcion":"EX CARR YURIMAGUAS 482","Zona":"BANDA DE SHILCAYO 1 - IZQUIERDA*","Total":50.29,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01132532","Nombre":"USHIÑAHUA YSUIZA, YENY                                                                              ","Descripcion":"JR. AMERICA CDRA 3 MIRADOR LAGARTOCOCHA","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":66.72,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01133210","Nombre":"PEZO LOPEZ, LUIS                                                                                    ","Descripcion":"JR. LOS JAZMINES 351-B. SH","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":48.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"01162394","Nombre":"TORRES LUNA, ZOILA                                                                                  ","Descripcion":"SINCHI ROCA 490","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":16.8,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"05613092","Nombre":"CARDENAS  RUIZ, AKEICITH                                                                            ","Descripcion":"JR. CARRRETERA MARGINAL SUR MZ 15 LT.14","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":34.08,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"10011248956","Nombre":"FLORES RAMIREZ, MARILU                                                                              ","Descripcion":"JR. LOS CEDROS MZ. D LT. 4-URB. DUBAI","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":84.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"10481837532","Nombre":"MORI DAVILA, FIORELA                                                                                ","Descripcion":"JR. LAS ROSAS MZ E Lt. 31","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":57.39,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"10718965361","Nombre":"LOZANO HIDALGO, LUCIA VANESSA                                                                       ","Descripcion":"AV. BILBAO Mz.A Lt. 2-DUBAI","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":38.94,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":-6.5014494,"Longitud":-76.3399777,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"16696952","Nombre":"PRADO VASQUEZ, HERMELINDA                                                                           ","Descripcion":"JR MIRAFLORES MZ 20 LOT 06 - NADINE HEREDIA - BDA DE SHILCAYO","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":48.28,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"16732156","Nombre":"ENEQUE GONZALES, ALFREDO                                                                            ","Descripcion":"MERCADO TOÑO  PSTO 17 - NUEVA VIA","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":262.78,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"20609792591","Nombre":"CORPORACION DE ALIMENTOS VAPA S.A.C.                                                                ","Descripcion":"PRO.RECREO NRO. 2 SEC. VISTA HERMOSA","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":127.67,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"27742172","Nombre":"ALTAMIRANO SILVA, ADOLFO                                                                            ","Descripcion":"JR. RECREO 380","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":136.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"40310218","Nombre":"MENDOZA TORRES, MERLI                                                                               ","Descripcion":"MADRID Mz 13 Lt. 21","Zona":"BANDA DE SHILCAYO 2-IZQUIERDA*","Total":32.27,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"40394946","Nombre":"CUZAN REAÑO, JESSICA                                                                                ","Descripcion":"JR. EDILBERTO REATEGUI 100","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":30.78,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"40457355","Nombre":"GRANDEZ MENDOZA, INES ROSAURA                                                                       ","Descripcion":"PARADERO SAUCE B.SH.","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":26.59,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"40916032","Nombre":"GARCIA FLROES, GRACIELA                                                                             ","Descripcion":"SAN MARTIN 393","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":48.46,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"41313970","Nombre":"CURITIBA MARAYARI, NANCY                                                                            ","Descripcion":"JR. SAN MARTIN MZ. J LT. 11","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":39.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"41607906","Nombre":"MACEDO MOZOMBITE, YUNELY                                                                            ","Descripcion":"JR LAS PALMERAS 135","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":36.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"41767160","Nombre":"DEL AGUILA MACEDO, GIBSON                                                                           ","Descripcion":"JR. LAS PALMERAS 1","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":32.06,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"41968099","Nombre":"GAMBOA LOZANO, LLENI                                                                                ","Descripcion":"JR. CUCAMBILLA C/1","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":70.1,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"43128930","Nombre":"AREVALO GARCIA, HEIDY INES                                                                          ","Descripcion":"JR. ATAHUALPA 448","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":88.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"43302813","Nombre":"CHUJUTALLI TAPULLIMA, ROCIO DEL PILAR                                                               ","Descripcion":"JR. LAS DALIAS 299","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":112.41,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"43511855","Nombre":"COTRINA COLLANTES, MARY ANGELICA                                                                    ","Descripcion":"LAS ROSAS MZ. A LT.12-B","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":26.42,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"43838204","Nombre":"AHUPINGAHUA PISCO, FERNANDO                                                                         ","Descripcion":"NUEVO MACATAMBO CD. 2","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":59.23,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"44288807","Nombre":"AGUIRRE ALVARADO, KARINA                                                                            ","Descripcion":"JR. PRIMAVERA MZ 18 LT 11 - AAHH NADINE","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":54.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"45016230","Nombre":"LULIQUIS CARRASCO, ESMILDA                                                                          ","Descripcion":"PJ. ANTONIO VIERA MZ D LOTE 9","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":38.78,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"46211071","Nombre":"BUSTAMANTE DELGADO, TEODOLINDA MADOLI                                                               ","Descripcion":"JR. ENRIQUE FLORES MZ. J LT. 5-STA. BARBARA","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":29.26,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"46222789","Nombre":"SINARAHUA AVILA, CUNY                                                                               ","Descripcion":"AA.VV DUBAI Mz. I Lt. 6","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":74.64,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"47569539","Nombre":"LEON GUERRA, JANINA                                                                                 ","Descripcion":"CARRT. MARG. OV. Mz Lt. 10","Zona":"BANDA DE SHILCAYO 2-DERECHA","Total":58.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TORRES, HAROL FERNANDO","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"48844171","Nombre":"SORIA REATEGUI, JESSY                                                                               ","Descripcion":"JR. LAS PALMERAS 195","Zona":"BANDA DE SHILCAYO 1 - DERECHA","Total":98.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RAMOS VILLANUEVA, CLARIBEL","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"73176843","Nombre":"ANTESANA ANGULO, GABY                                                                               ","Descripcion":"JR ALAMEDA LAS BRISAS MZ J LT 25 NUEVA AMISTAD","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":38.24,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"},{"FechaCc":"20/06/2026","Doi":"80450891","Nombre":"CAMPOS DIAS, VILMA                                                                                  ","Descripcion":"JR. LOS GIRASOLES MZ. A LT. 19","Zona":"BANDA DE SHILCAYO 3- DERECHA","Total":180.84,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MEGO GRANDEZ, GABRIELA FERNANDA","Latitud":0.0,"Longitud":0.0,"Placa":"T7C841","Conductor":"INSAPILLO PANDURO, JOHN ELVIS"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

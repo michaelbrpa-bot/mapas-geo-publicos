@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"22/06/2026","Doi":"10178817146","Nombre":"ARGOMEDO VILCA JAVIER AUSBERTO                                                                      ","Descripcion":"MZ KLT 4LOS NARANJOS II ETAPA STATERESA DE AVILA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":74.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0877535,"Longitud":-79.0126168,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10178948321","Nombre":"GONZALES ESCOBEDO MARIA VENTURA                                                                     ","Descripcion":"AV PUMACAHUA 664 (FRENTE AL COLEGIO VÍCTOR RAÚL)                      ","Zona":"PORVENIR MANPUESTO","Total":82.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0860997,"Longitud":-79.0087667,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10180624371","Nombre":"CHAVEZ MELENDEZ, GLADYS JEANETTE                                                                    ","Descripcion":"AV. PUMACAHUA NRO. 656 P.J. EL PORVENIR","Zona":"PORVENIR MANPUESTO","Total":38.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0860834,"Longitud":-79.008798,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10180801222","Nombre":"VERDE VERA GUIDO CARLOS                                                                             ","Descripcion":"PSJMIGUELALJOBIN281URBCHIMU","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":224.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0918421,"Longitud":-79.0099532,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10181506780","Nombre":"AGUIRRE BASILIO RICHARD FRANKLIN                                                                    ","Descripcion":"HIPOLITO UNANUE 265 LA MARQUEZA","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":38.52,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0932298,"Longitud":-79.0104912,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10181997058","Nombre":"CARBAJAL VELASQUEZ , ANA                                                                            ","Descripcion":"PSJE. FORTUNATO HERRERA 544 ","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":70.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0911918,"Longitud":-79.0083151,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10190779209","Nombre":"QUISPE  CASTILLO , SANTOS  FELICITA                                                                 ","Descripcion":"MARCABALITO 458 SANTA TERESA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":91.94,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0900476,"Longitud":-79.0142825,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10327722463","Nombre":"AMARANTO VILLA FELIPA                                                                               ","Descripcion":"MZ M LT 09 LOS NARANJOS                 ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":63.46,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0883064,"Longitud":-79.0130445,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10410281941","Nombre":"CAYETANO PAREDES, YESICA LIZETH                                                                     ","Descripcion":"HIPÓLITO ORDÓÑEZ MZ W LOTE 28","Zona":"PORVENIR MANPUESTO","Total":81.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0827737,"Longitud":-79.0069467,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10413908201","Nombre":"ROJAS HERNANDEZ, JOSE MIGUEL                                                                        ","Descripcion":"PSJE MARIA PARADO 205 EL PORVENIR","Zona":"PORVENIR MANPUESTO","Total":60.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0858712,"Longitud":-79.0104895,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10437078284","Nombre":"REYES ASTO GIANCARLO                                                                                ","Descripcion":"MZ LL LT 7 STA TERESA DE AVILA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0909868,"Longitud":-79.0156045,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10455658328","Nombre":"LEON MORALES MERY ANALI                                                                             ","Descripcion":"HUMBOLT 372 - DANIEL HOYLE                                            ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":57.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0965375,"Longitud":-79.0121007,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"10456887525","Nombre":"RODRIGUEZ  FLORIANO , SANTOS  CLORINDA                                                              ","Descripcion":"MCDO AURORA PTO 125 STA TERESA DE AVILA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0879446,"Longitud":-79.0146455,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17804719","Nombre":"VALDERRAMA PAREDES EUGENIO BACILIO                                                                  ","Descripcion":"MCD.GRANCHIMARPTO79","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":133.56,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0920053,"Longitud":-79.0121589,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17854490","Nombre":"MARÍA FLORENTINI BOCANEGRA                                                                          ","Descripcion":"AV. MIRAFLORES 2025 STA TERESA ÁVILA    ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":202.13,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0896329,"Longitud":-79.016643,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17856838","Nombre":"ULLOA RODRIGUEZ ELSA                                                                                ","Descripcion":"MERCADO GRAN CHIMAR PTO 78","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":32.74,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17869090","Nombre":"ZAVALETA DE MEREJILDO, HONORIA                                                                      ","Descripcion":"PSJE GODOFREDO GARCIA 550","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":41.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0908878,"Longitud":-79.0085956,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17888467","Nombre":"VARGAS MORENO MANUELA YOLANDA                                                                       ","Descripcion":"MCDO LA AURORA PTO 05 SANTA TERESA DE AVILA                           ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":39.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0877007,"Longitud":-79.0152705,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17890056","Nombre":"VARGAS PLASENCIA, MARLENE TERESA                                                                    ","Descripcion":"GUILLERMO MARCONY 660 PAY PAY","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":28.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17910354","Nombre":"EVANGELISTA LUJAN CARLOS ALBERTO                                                                    ","Descripcion":"MZ L LT 4 LOS NARANJOS ( COLEGIO RENACER)                             ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":66.9,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0879395,"Longitud":-79.0128019,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"17958164","Nombre":"RIVEROS MOGOLLON, JUANA AZUCENA                                                                     ","Descripcion":"OSWALDO HERCELLES 373 URB.  CHIMU","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":54.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18059291","Nombre":"ABANTO VALDERRAMA MARINA ESTHER                                                                     ","Descripcion":"JOSÉ OLAYA 805 EL PORVENIR                                            ","Zona":"PORVENIR MANPUESTO","Total":100.32,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0842737,"Longitud":-79.0074698,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18078093","Nombre":"BENITES MEREGILDO FLOR ELIZABETH                                                                    ","Descripcion":"JOSE CRESPO N+ 1018 PORVENIR","Zona":"PORVENIR MANPUESTO","Total":167.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0802397,"Longitud":-79.0049252,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18088431","Nombre":"VERDE LOYOLA MIGUEL ANGEL                                                                           ","Descripcion":"FORTUNATO HERRERA 554  URB CHIMU","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":382.44,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0910116,"Longitud":-79.0082904,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18104868","Nombre":"VERA TOLEDO LUISA HAYDEE                                                                            ","Descripcion":"MCDOVILLARREALPTO128","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":65.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0945367,"Longitud":-79.0134732,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18123955","Nombre":"RIVERA EUSTAQUIO DE VEGA MARIA                                                                      ","Descripcion":"PST.M3 MDO.AURORA                                                     ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":50.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0879218,"Longitud":-79.0150478,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18149738","Nombre":"BARBARAN TRUJILLO TERESA NAZARIA                                                                    ","Descripcion":"PROLONGACIÓN MIRAFLORES 2350                                          ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":46.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0863052,"Longitud":-79.0148048,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18150337","Nombre":"ASPIROS ESPINOZA SEGUNDO SACRAMENTO                                                                 ","Descripcion":"TITU CUSI YUPANQUI 621                                                ","Zona":"PORVENIR MANPUESTO","Total":100.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0853968,"Longitud":-79.0093298,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18191664","Nombre":"MIÑANO PRINCIPE SANTIAGO                                                                            ","Descripcion":"MCDVILLARREALPTO165166","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":497.99,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0948315,"Longitud":-79.0143225,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"18202802","Nombre":"TITO ITOSACA JANNET DORIS                                                                           ","Descripcion":"FCO DE PAULA 244","Zona":"PORVENIR MANPUESTO","Total":97.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0855045,"Longitud":-79.0123011,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"19027897","Nombre":"AVALOS GUTIERREZ, ROSINA IDELSA                                                                     ","Descripcion":"Mcd chacarero pst 2","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":52.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0892537,"Longitud":-79.008092,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"19073982","Nombre":"GUTIERREZ RODRIGUEZ ADELA                                                                           ","Descripcion":"MCD CHACARERO PTOG 6                                                  ","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":48.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0893153,"Longitud":-79.0079926,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"19074790","Nombre":"BLAS VARGAS SANTOS                                                                                  ","Descripcion":"MCD CHACARERO PTO A3","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":132.06,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0894228,"Longitud":-79.0081615,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"19684012","Nombre":"QUEZADA BARBARAN LORENZO                                                                            ","Descripcion":"PROLONGACION MIRAFLORES 2228 STA LUCIA                                ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":57.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.087079,"Longitud":-79.0152629,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"20481684260","Nombre":"INVERSIONES UNIVERSAL SAC                                                                           ","Descripcion":"PROLONG. STA. 1585 URB.PAY PAY","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":28.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0943756,"Longitud":-79.0152633,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"20601379598","Nombre":"INVERSIONES RELUCE S.A.C.                                                                           ","Descripcion":"AV.PUMACAHUA NRO. 850","Zona":"PORVENIR MANPUESTO","Total":1263.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"27858665","Nombre":"ARIAS CAMPOS SANTOS LIDIA                                                                           ","Descripcion":"MCDO VILLARREAL PSTO A-214 PERFUMERIA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":65.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"32916842","Nombre":"DOMINGUEZ GUZMAN MARIA CARMEN                                                                       ","Descripcion":"PSJE JULIÁN AYALA 115 MANPUESTO PORVENIR","Zona":"PORVENIR MANPUESTO","Total":54.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0850831,"Longitud":-79.0116314,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"40315892","Nombre":"REYES PAREDES DELIA                                                                                 ","Descripcion":"LORD COCHRANE 275 STA LUCIA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":243.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0872217,"Longitud":-79.012912,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"40555832","Nombre":"DE LA CRUZ ABANTO ELY LIDIA                                                                         ","Descripcion":"PTO 170 MCDO VILLAREAL URB. LOS GRANADOS","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":302.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0947414,"Longitud":-79.0140178,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"41260228","Nombre":"VERA MORALES FELISBINDA                                                                             ","Descripcion":"PTO 206 MCD VILLAREAL","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":46.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0947835,"Longitud":-79.0142446,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"41455807","Nombre":"LOPEZ HUACCHA DANIEL                                                                                ","Descripcion":"TITUCUSIYUPANQUI 615","Zona":"PORVENIR MANPUESTO","Total":38.22,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.085396,"Longitud":-79.0093481,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"41907598","Nombre":"AREVALO RODRIGUEZ, ELVIRA  ROSA                                                                     ","Descripcion":"PTO 25 MERCADO AURORA SANTA TERESA","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":70.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0879346,"Longitud":-79.0146578,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"42251737","Nombre":"CHAVEZ RODRIGUEZ ANITA MELVA                                                                        ","Descripcion":"SEBASTIÁN BARRANCA 413                                                ","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":56.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0922264,"Longitud":-79.0116483,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"43365861","Nombre":"ROJAS CASTRO, ITALO JOSUE                                                                           ","Descripcion":"PROL. MIRAFLORES 2074","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":32.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0886785,"Longitud":-79.0159694,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"44285684","Nombre":"IRENE CAMACHO OTINIANO                                                                              ","Descripcion":"PASAJE MIGUEL ALJOBIN 334  URB CHIMU   ","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":79.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"44400167","Nombre":"GARCIA PEREZ WALTER                                                                                 ","Descripcion":"PTO 74 MERCADO VILLAREAL","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":86.22,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0945369,"Longitud":-79.0132911,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"44760703","Nombre":"MENDEZ VILLANUEVA MARIA MAGDALENA                                                                   ","Descripcion":"MICAELABASTUIDAS 599PORVENIR","Zona":"PORVENIR MANPUESTO","Total":46.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0839086,"Longitud":-79.009103,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"45074675","Nombre":"HUACCHA RODRIGUEZ MICHAEL                                                                           ","Descripcion":"ANTONIO PARDO #204                                                    ","Zona":"PORVENIR MANPUESTO","Total":43.44,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-8.0862338,"Longitud":-79.0104434,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"45107422","Nombre":"REBAZA RODRIGUEZ ALEJANDRA                                                                          ","Descripcion":"MZ L LT 08 - LOS NARANJOS                                             ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":43.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.0879447,"Longitud":-79.0124075,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"45471366","Nombre":"BLAS VARGAS VANESA                                                                                  ","Descripcion":"GRAN CHIMAR PTO. 38","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":89.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"45884115","Nombre":"LLAPO RIVEROS ELVA MAGALY                                                                           ","Descripcion":"CAL. SEBASTIÁN BARRANCA 409 URB. LOS GRANADOS","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":80.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"70306031","Nombre":"WINNY NICOLL ALLISON KIMBERLY GUARNIZ                                                               ","Descripcion":"HIPOLITOUNANUE 426LOSGRANADOS","Zona":"CHIMU - GRANADOS - MCDO CHIMAR","Total":125.39,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PABLO FIGUEROA, EVELYN","Latitud":-8.0919436,"Longitud":-79.0124562,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"22/06/2026","Doi":"76570128","Nombre":"SAGASTEGUI SANCHEZ BRYAN                                                                            ","Descripcion":"VON HUMBOLT 386                                                       ","Zona":"RAZURI - DANIEL HOYLE - S.T.AVILA - MCDOS","Total":132.66,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.096495,"Longitud":-79.0120563,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

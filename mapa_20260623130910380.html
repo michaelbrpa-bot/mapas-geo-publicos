@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"22/06/2026","Doi":"10179514295","Nombre":"PICHON DE CASTRO MARCELA                                                                            ","Descripcion":"LOS ANGELES #899 - EL PORVENIR                                        ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":122.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0712934,"Longitud":-78.99843,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10180764726","Nombre":"BALTODANO PRADO MERCEDES SABINA                                                                     ","Descripcion":"ASENCIO VERGARA 303 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":50.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0735092,"Longitud":-78.9991654,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10181172806","Nombre":"LLANCAR VIGO AQUILINO                                                                               ","Descripcion":"28 DE JULIO LT.94 FLORENCIA DE MORA                                   ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":31.77,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10181196462","Nombre":"GARCIA  MENDOZA , LILIA  PROPETIZA                                                                  ","Descripcion":"LUIS FELIPE DE LAS CASAS MZ 9 LTE 6 FLORENCIA DE MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":68.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10190500832","Nombre":"RIVAS PIÑA ANITA                                                                                    ","Descripcion":"AV 26 DE MARZO 266 FCI DE MORA                                        ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":25.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10414804212","Nombre":"QUIROZ VERA ESTHER MARITZA                                                                          ","Descripcion":"9 DE OCTUBRE MZ 19 LT 13 LA CABAÑA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":20.75,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10427480921","Nombre":"PAREDES VACA ENMA YOLINDA                                                                           ","Descripcion":"MZ 5LT 22PSJLAS MAGNOLIAS FLORENCIA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":171.94,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10444414711","Nombre":"NUÑUVERO DE LA CRUZ JAKELYN KATERINE                                                                ","Descripcion":"CALLE SAN FRANCISCO MZ 3 LT 14 FLORENCIA DE MORA                      ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":72.09,"Distribucion":"Dismar[2]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10486533302","Nombre":"LOPEZ ZAVALETA, NELLY ELIZABETH                                                                     ","Descripcion":"CALLE SINCHI ROCA 248 RIO SECO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":356.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"10737906774","Nombre":"CALDERON VALVERDE ALLISON MADELEINE                                                                 ","Descripcion":"CALLE 9 DE OCTUBRE 451 FLORENCIA DE MORA                              ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":158.96,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17826661","Nombre":"SAUNA CORCUERA, LIDIA EDELGUISA                                                                     ","Descripcion":"CALLE SAN LUIS 1035 RIO SECO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":75.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17858500","Nombre":"SOTO MEDINA NIDIA GLADIS MARLEN                                                                     ","Descripcion":"SANTA ROSA #450 - ALTO MOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":51.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.1791488,"Longitud":-78.995452,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17893209","Nombre":"SANCHEZ BACILIO, EULOGIA  ABIGAIL                                                                   ","Descripcion":"Mcdo Manuel Cipriano Psto 138 ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":29.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17928336","Nombre":"ARTIAGA SOPLAS, MELANIA                                                                             ","Descripcion":"HÚSARES DE JUNÍN 415 FLORENCIA DE MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":108.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17944597","Nombre":"REYES MARCELO TERESA                                                                                ","Descripcion":"MANCO CÁPAC. #. 1528 - FLORENCIA DE MORA                              ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":211.3,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17950565","Nombre":"CRUZADO VASQUEZ CARMEN JULIA                                                                        ","Descripcion":"CALLE RIBAGUERO # 498 - PORVENIR                                      ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":234.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17955182","Nombre":"VENTURA VASQUEZ ROSA FRANCISCA                                                                      ","Descripcion":"MAITA CAPAC 1298 EL PORVENIR","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":48.45,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":-8.075315327,"Longitud":-79.0121071413,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17956650","Nombre":"GUTIERREZ ALFARO, GERTRUDES                                                                         ","Descripcion":"LOS ANGELES 616 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":54.45,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17957136","Nombre":"ZAVALETA VARAS DOMINGO                                                                              ","Descripcion":"CALLE JOSÉ DE LA RIVA AGÜERO 560 EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":67.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0748143,"Longitud":-78.9996634,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"17963797","Nombre":"CASTRO DE LEIVA IDA ODERAY                                                                          ","Descripcion":"ASTOPILCO 1018 RIO SECO                                               ","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":17.92,"Distribucion":"Dismar[1]-Lider[0]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18019916","Nombre":"PEREZ POLO, CESILIA                                                                                 ","Descripcion":"MCD MANUEL CIPRIANO PTO 45","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":83.52,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.07707,"Longitud":-79.0137083,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18076064","Nombre":"ROJAS JUAREZ ANA MARIA                                                                              ","Descripcion":"HUASCAR Nº 824  RIO SECOTRUJILLOTRUJILLOTRUJILLO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":69.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18118419","Nombre":"SANCHEZ GOMEZ DE LLANCAR JUANA EMILIA                                                               ","Descripcion":"28 DE JULIOLT 94 PELUQUERIA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":38.75,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18141004","Nombre":"COTRINA COLUNCHE ROSA                                                                               ","Descripcion":"DELATORREUGARTE334FCIA.MORA                                           ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":126.87,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18159774","Nombre":"GARCIA AGUILAR DORIS ELIZABETH                                                                      ","Descripcion":"26 DE JULIO 170 FLORENCIA DE MORA                                     ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":56.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18175267","Nombre":"CRUZ PONCE, TEOFILA                                                                                 ","Descripcion":"MCDO VICTOR LARCO PSTO 79 / 80","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":1242.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0786623,"Longitud":-79.001137,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18185593","Nombre":"AGUILAR RODRIGUEZ ANA ROCIO                                                                         ","Descripcion":"9 DE OCTUBRE 429 FCIA DE MORA                                         ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":139.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.0792053,"Longitud":-79.0186653,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18185627","Nombre":"MURGA MORENO SANTOS                                                                                 ","Descripcion":"8 DE SETIEMBRE. #. 352. FLORENCIA DE MORA                             ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":52.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"18220714","Nombre":"GOMEZ JUAREZ OLGA MARIBEL                                                                           ","Descripcion":"ESQ HIPÓLITO UNANUE TOMAS MOSCOSO 1101  RIO SECO                      ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":243.33,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0783167,"Longitud":-79.0027622,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19029844","Nombre":"AREDO QUISPE IRAIDA                                                                                 ","Descripcion":"AAHH MARIA CALDERON MZ 17E LT 03 RIO SECO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":101.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19051974","Nombre":"AREDO QUISPE JORGE LUIS                                                                             ","Descripcion":"MZ Z-3 LT 8 AA.HH ANTENOR ORREGO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":461.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19054820","Nombre":"GARCIA CABADA, YOLANDA MERIDA                                                                       ","Descripcion":"AVENIDA ASENCIO VERGARA 601 RIO SECO PORVENIR","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":67.05,"Distribucion":"Dismar[1]-Lider[0]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":-8.075315327,"Longitud":-79.0121071413,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19090470","Nombre":"ENRIQUEZ AURORA MARGOT ELIZABETH                                                                    ","Descripcion":"MCDO MANUEL CIPRIANO PSTO 35 36                                       ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":43.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.0770803,"Longitud":-79.0143211,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19566587","Nombre":"TRINIDAD VERA SILVERIA                                                                              ","Descripcion":"22 DE FEBRERO 412FMORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":41.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19671859","Nombre":"SANCHEZ PEREZ, NILA  ZELMIRA                                                                        ","Descripcion":"PTO 24 MCDO CIPRIANO FLORENCIA DE MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":30.65,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.0769316,"Longitud":-79.0133137,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19679947","Nombre":"NEYRA HORNA SANTOS                                                                                  ","Descripcion":"MCDO MANUEL CIPRIANO PTO 136 FCIA DE MORA                             ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":440.86,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"19682720","Nombre":"DE LA CRUZ DE NEYRA LEONILA                                                                         ","Descripcion":"MCDO. MANUEL CIPRIANO  PTO #  135   FLORENCIA DE MORA                 ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":99.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"20477255001","Nombre":"REPRESENTACIONES CALY SAC                                                                           ","Descripcion":"08 DE OCTUBRE NRO 460 FLORENCIA DE MORA                               ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":71.39,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"26925020","Nombre":"VARGAS FLORES BERTHA                                                                                ","Descripcion":"ANTENOR ORREGO MZ Z PRIMA LT 06","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":145.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":-8.075315327,"Longitud":-79.0121071413,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"26931097","Nombre":"FABIAN DE RONDON JESUS                                                                              ","Descripcion":"MCDO MANUEL CIPRIANO PTO 43-44 FLORENCIA DE MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":53.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.0770602,"Longitud":-79.0142093,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"40636084","Nombre":"HARO GUEVARA NELY JAKELIN                                                                           ","Descripcion":"10DEJULIO 770FLORENCIADEMORA                                          ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":30.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"40823633","Nombre":"CASTAÑEDA RODRIGUEZ VANESA                                                                          ","Descripcion":"LOS HEROES124 PORVENIR BOTICA","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":384.57,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0747685,"Longitud":-79.0014804,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"41006014","Nombre":"CHIRINOS RAMOS OSCAR ANTONIO                                                                        ","Descripcion":"ESQ. ASENCIO VERGARA  HIPOLITO  UNANUE (MOLINO MI PATY) RIO SECO      ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":79.08,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0728882,"Longitud":-79.0007607,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"41251780","Nombre":"BLAS VALVERDE JUVENAL                                                                               ","Descripcion":"CALLE 29 DE AGOSTO #309 (AL COSTADO DEL COLEGIO TUPAC AMARU)          ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":65.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"41759794","Nombre":"MENDEZ MENDEZ NORMA GRIMANEZA                                                                       ","Descripcion":"CALLE LOS ÁNGELES 220 RIO SECO","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":1420.22,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0782426,"Longitud":-79.0008832,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"42274495","Nombre":"LUJAN SALCEDO, DIANY                                                                                ","Descripcion":"20 DE SETIEMBRE MZ 8 LOTE 29A (ALFRENTE DE LA FARMACIA)","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":198.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"42415883","Nombre":"VERNARDO REYES, MARIBEL AGUSTINA                                                                    ","Descripcion":"CALLE OLLANTAY 1076 RIO SECO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":24.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"43814508","Nombre":"RAZA RAZZA, DALIA MARICIELO                                                                         ","Descripcion":"MERCADO MANUEL CIPRIANO PTO 88(LIMPIEZA)","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":105.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"44284159","Nombre":"COTRINA ABANTO ALICIA                                                                               ","Descripcion":"AA.HH.LUIS FELIPE DE LAS CASAS MZ.1 LT. 6 FLORENCIA  MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":42.34,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"45044530","Nombre":"ZAVALETA RODRIGUEZ, NEYSI  ANGELITA                                                                 ","Descripcion":"26 MARZO 164 FLORENCIA MORA","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":126.34,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"45272851","Nombre":"ALAYO SEVILLA, WENDE IVON                                                                           ","Descripcion":"LOS ANGELES 1202 EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":237.46,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0682324,"Longitud":-78.9972048,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"47462004","Nombre":"AVALOS FERRER, LILIANA  LIZETH                                                                      ","Descripcion":"HIPOLITO UNANUE NRO822 PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":138.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"47898171","Nombre":"HUALLPAYUNCA HERRERA DIANA ELIZABETH                                                                ","Descripcion":"WIRACOCHA 1028 RIO SECO","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":10.32,"Distribucion":"Dismar[1]-Lider[0]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":-8.075315327,"Longitud":-79.0121071413,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"48660173","Nombre":"ZAVALETA GIRON MARTHA                                                                               ","Descripcion":"AV. SANCHEZ CARRION LOS LIBERTADORES  MZ Ñ LT.  2                     ","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":101.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0647557,"Longitud":-78.9950323,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"73432844","Nombre":"ARANDA GARCIA LIS TALIA                                                                             ","Descripcion":"ESQ. ORELLANA  ANGELES 1257","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":187.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0785207,"Longitud":-79.0008312,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"75285368","Nombre":"CRUZ HARO AGUEDA LIZETH                                                                             ","Descripcion":"CALLE INCA YUPANQUI1047ENTRE WIRACOCHAEL PORVENIR","Zona":"RIO SECO II - MCDO 07 DE JUNIO - ANTENOR ORREGO","Total":56.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"GUZMAN CASTRO, MARCO ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"80239796","Nombre":"YNZIL CHIROQUE ELMER MIGUEL                                                                         ","Descripcion":"CALLE 9 DE OCTUBRE 458 FLORENCIA BODREBECA                            ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":42.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":0.0,"Longitud":0.0,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"80259304","Nombre":"LIZARRAGA ALVAREZ ELENA                                                                             ","Descripcion":"CALLE HIPÓLITO HUNANUE #896 RÍO SECO - EL PORVENIR","Zona":"RIO SECO I - A.ORREGO II - MCDO TOMAS M.","Total":186.42,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CESIAS MEZA, JULIO LUIS","Latitud":-8.0718006,"Longitud":-79.0007531,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"},{"FechaCc":"22/06/2026","Doi":"80396472","Nombre":"CALDERON ABANTO CELESTINA CARMELA                                                                   ","Descripcion":"LEONCIO PRADO 445(A LADO DEL MERCADO)                                 ","Zona":"FLORENCIA DE MORA I - MCDO CIPRIANO","Total":30.65,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RIVAS PLATA RODRIGUEZ, VANESSA","Latitud":-8.0774017,"Longitud":-79.0133517,"Placa":"T3W802","Conductor":"ESQUIVEL CRUZ, EDELIR JESUS"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

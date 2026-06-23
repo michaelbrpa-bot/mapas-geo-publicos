@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"22/06/2026","Doi":"08142719","Nombre":"HERNANDEZ ROJAS, SANDRA VALERIA                                                                     ","Descripcion":"Calle Los Rubies Mz 1 Lote 6 Urb La Rinconada 5ta etapa","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":150.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10002455540","Nombre":"CASTILLO ORTIZ ROSA ELENA                                                                           ","Descripcion":"AV.PESQUEDA MZ O LOTE 19                ","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":66.12,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10165149756","Nombre":"BELLO SERRANO DE CARRILLO, TERESA EULALIA                                                           ","Descripcion":"FCO DE ZELA 1428  EL PORVENIR","Zona":"PORVENIR CENTRAL - FERSAM","Total":52.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0849488,"Longitud":-79.000019,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10180623880","Nombre":"CASTILLO DE CHAVEZ, ANITA HERLINDA                                                                  ","Descripcion":"CL. GABRIEL AGUILAR 1416 EL PORVENIR","Zona":"PORVENIR CENTRAL - FERSAM","Total":46.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0826305,"Longitud":-78.9995571,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10181120326","Nombre":"DIAZ BECERRA FRANKLIN                                                                               ","Descripcion":"JOSECRESPO 362RAZURI","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":86.76,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10181130208","Nombre":"ALVAREZ  LECCA , MARIO  CECILIO                                                                     ","Descripcion":"PUMACAHUA #1321","Zona":"PORVENIR CENTRAL - FERSAM","Total":299.4,"Distribucion":"Dismar[0]-Lider[2]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0867477,"Longitud":-79.0018389,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10181818218","Nombre":"RAMOS  AGREDA , JUAN                                                                                ","Descripcion":"AV 5 DE ABRIL MZ 4 LT 32 PESQUEDA III","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":316.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10190897236","Nombre":"ULLOA RODRIGUEZ ANGELICA ALIZABETH                                                                  ","Descripcion":"LA BARATINA MZ 5 LT20 LA RINCONADA                                    ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":51.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0960305,"Longitud":-79.0045662,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10192352504","Nombre":"RAMIREZ DE TERAN ISABEL                                                                             ","Descripcion":"LAS ANIMAS MZ 42LT 12","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":79.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0932593,"Longitud":-78.9979747,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10269531601","Nombre":"SANTOS CIPRIANO BENILDE                                                                             ","Descripcion":"LOS AGUANOS MZ 73 LTE 3 RINCONADA   ","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":35.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10403158955","Nombre":"REYES VERDE SILVIA IDELSA                                                                           ","Descripcion":"CAL LOS CEDROS MZA4 LOTE5 EL PALOMARESQUINA GUISADA VIRGEN DE LA","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":148.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0969233,"Longitud":-79.0071519,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10446526648","Nombre":"SOTO SALVADOR, MARIA YSABEL                                                                         ","Descripcion":"MICAELA BASTIDAS 1389 EL PORVENIR","Zona":"PORVENIR CENTRAL - FERSAM","Total":168.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10772848205","Nombre":"MORALES SANTISTEBAN JUAN JULLINHOS                                                                  ","Descripcion":"LOS CIPRESES MZ 17 LT 14 URB LA RINCONAD","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":347.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"10804285909","Nombre":"RUBIO LUJAN EDITH EMILENA                                                                           ","Descripcion":"DIAMANTES MZ 16 LT 47 URB RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":49.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0979443,"Longitud":-79.003962,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17874088","Nombre":"MARQUEZ QUINTOS ANA VICTORIA                                                                        ","Descripcion":"AV PESQUEDA 557 RINCONADA               ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":173.33,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0921999,"Longitud":-79.001124,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17879992","Nombre":"VALLES AVALOS BETTY                                                                                 ","Descripcion":"MCDO LOS PORTALES PSTO 143  LA RINCONADA","Zona":"MCDO PORTALES - PARADA ZELA","Total":42.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0874321,"Longitud":-79.002638,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17886710","Nombre":"MESTANZA CORTIJO DE MARQUINA SILVIA MARGOT                                                          ","Descripcion":"PABLO DE OLAVIDE 257 RAZURI","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":101.69,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17941925","Nombre":"ELENA JULIA MONZÓN DE PAREDES                                                                       ","Descripcion":"PSTO 75  MCDO LOS PORTALES","Zona":"MCDO PORTALES - PARADA ZELA","Total":96.6,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0871888,"Longitud":-79.0025554,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17950484","Nombre":"AVALOS ARTEAGA BERTHA                                                                               ","Descripcion":"LOS TORNILLOS MZ A LT 7LA RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":55.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0976601,"Longitud":-79.006004,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17957143","Nombre":"CACHI ANGULO MERCEDES ELIZABETH                                                                     ","Descripcion":"MCD.LOS PORTALES PTO 194                ","Zona":"MCDO PORTALES - PARADA ZELA","Total":30.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0875175,"Longitud":-79.0028656,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17957609","Nombre":"CABRERA OBANDO CONSUELO MARTINA                                                                     ","Descripcion":"CALLE CHANCHAN MZ HLT 15URB LIBERTAD                                  ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":159.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17959567","Nombre":"RUBIO RODRIGUEZ ALEJANDRINA                                                                         ","Descripcion":"AV PESQUEDA MZ D LOTE 22 URB LA LIBERTAD                              ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":83.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"17999966","Nombre":"VALDERRAMA HORNA DE EVANGELISTA, ROCIO DEL PILAR                                                    ","Descripcion":"MZ U LT 1 URB LA RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":41.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0914603,"Longitud":-78.9943821,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18041579","Nombre":"FLORIANO PEREZ SANTOS                                                                               ","Descripcion":"LOS GRANATES 158  RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":120.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0919419,"Longitud":-79.0005415,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18062788","Nombre":"BRICEÑO MALQUI MARGARITA                                                                            ","Descripcion":"ESPALDAS INGRID GUERERO MDO PORTALES#256","Zona":"MCDO PORTALES - PARADA ZELA","Total":117.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0875423,"Longitud":-79.0028547,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18063233","Nombre":"CENTURION MENDOCILLA, OLGA  HILDA                                                                   ","Descripcion":"ANTONIO DE SUCRE MZ E LT 6A INDEPENDENCIA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":42.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0909969,"Longitud":-78.9962024,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18072489","Nombre":"RODRIGUEZ CORVERA JAYER                                                                             ","Descripcion":"MANCOINCA720PORVENIRELPORVENIR                                        ","Zona":"PORVENIR CENTRAL - FERSAM","Total":76.57,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0838737,"Longitud":-78.9987961,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18075252","Nombre":"HONORIO DE TORIBIO BERTHA IRENE                                                                     ","Descripcion":"PJE ZELA 1346 PORVENIR","Zona":"MCDO PORTALES - PARADA ZELA","Total":285.15,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0848699,"Longitud":-79.0009116,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18079472","Nombre":"ARMAS ALVAREZ FELIX                                                                                 ","Descripcion":"FCO.DE ZELA 1342 PJE.MCD.STA.ROSA","Zona":"MCDO PORTALES - PARADA ZELA","Total":72.26,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0849187,"Longitud":-79.0009183,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18115307","Nombre":"PEREDA SANCHEZ DE LEON, RAQUEL AMALIA                                                               ","Descripcion":"AV 5 DE ABRIL MZ 7 LTE 14 SEC 3 PESQUEDA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":63.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18127294","Nombre":"URIOL VERA MARITZA YENI                                                                             ","Descripcion":"PSJE LOS ISHPINGOS  MZ 10 LT 19 RINCONADA                             ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":100.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18142764","Nombre":"CHUQUIMANGO MENDOZA HOMERO                                                                          ","Descripcion":"PSTO15-14  MCDO PORTALES  RINCONADA                                   ","Zona":"MCDO PORTALES - PARADA ZELA","Total":55.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0872299,"Longitud":-79.00272,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18150616","Nombre":"FLORES ROSALES PEDRO                                                                                ","Descripcion":"MZ R LT9 LOS PORTALES LA RINCONADA                                    ","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":147.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0889433,"Longitud":-79.0043755,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18162477","Nombre":"VERA MERCEDES, FLOR DE MARIA                                                                        ","Descripcion":"PABLO D' OLAVIDE 223/ REF COSTADO DE FUNERARIA RAMÍREZ","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":74.93,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0991772,"Longitud":-79.0108247,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18182560","Nombre":"DIAZ CORDOVA ALCIRA                                                                                 ","Descripcion":"CRISOPRASAS MZ 38 LT 30 LA RINCONADA                                  ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":47.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0915563,"Longitud":-78.9996123,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"18214677","Nombre":"DURAND AVALOS, OLINDA ROSA                                                                          ","Descripcion":"CL DIAMANTES MZ 22 LT 1-B - RINCONADA  ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":63.12,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0983072,"Longitud":-79.0035467,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"19091006","Nombre":"VENTURA RODRIGUEZ ISABEL                                                                            ","Descripcion":"MZDLTE4URBLIBERTAD","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":119.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"19191928","Nombre":"PERALTA BECERRA MARINA                                                                              ","Descripcion":"JOSE ASUCRE MZ E LT 4 URBINDEPENDENC                                  ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":89.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"19680149","Nombre":"RODRIGUEZ VARGAS TEOFILA                                                                            ","Descripcion":"JOSE OLAYA 1587 EL PORVENIR","Zona":"PORVENIR CENTRAL - FERSAM","Total":99.78,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"19700683","Nombre":"TOMAS  RODRIGUEZ, JUSTO  RAUL                                                                       ","Descripcion":"HERMANOS ANGULO 645 EL PORVENIR","Zona":"PORVENIR CENTRAL - FERSAM","Total":257.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0842191,"Longitud":-79.0002548,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"20602890334","Nombre":"INVERSIONES PLAZA FERSAM EIRL                                                                       ","Descripcion":"JR. FRANCISCO DE ZELA NRO. 1337   PORVEN","Zona":"PORVENIR CENTRAL - FERSAM","Total":6121.56,"Distribucion":"Dismar[3]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0845831,"Longitud":-79.0010663,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"20613867521","Nombre":"EL TARMEÑO E.I.R.L.                                                                                 ","Descripcion":"LOS DIAMANTES MZ 22 LT 1 A-1 LA RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":1072.23,"Distribucion":"Dismar[2]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"20614043734","Nombre":"SMITH CORP S.R.L.                                                                                   ","Descripcion":"PJ. MARIA PARADO DE BELLIDO NRO. 353 URB. ANDRES RAZURI","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":246.7,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"26698888","Nombre":"JULCAMORO EVA, EVA                                                                                  ","Descripcion":"MERCADO LOS PORTALES 51 EL PORVERNIR","Zona":"MCDO PORTALES - PARADA ZELA","Total":140.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0873598,"Longitud":-79.0024055,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"40125533","Nombre":"MIÑANO SARE LOURDES ELIZABETH                                                                       ","Descripcion":"JOSE OLAYA 1524 PORVENIREL PORVENIR                                  ","Zona":"PORVENIR CENTRAL - FERSAM","Total":71.02,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0841155,"Longitud":-78.9985011,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"40451478","Nombre":"VALERA AROCA RAQUEL                                                                                 ","Descripcion":"PSTO  411 MCDO LOS PORTALES","Zona":"MCDO PORTALES - PARADA ZELA","Total":72.77,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"40751067","Nombre":"ZAVALETA CÓRDOVA LALY                                                                               ","Descripcion":"MZ.M LOT.10 LIBERTAD","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":103.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0911451,"Longitud":-78.9943606,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"41304074","Nombre":"REBAZA SABIDIO LIZETH                                                                               ","Descripcion":"MZ Q LT 21 LOSPORTALES (ESPALDAS PLAZA VEA)","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":61.72,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"42010388","Nombre":"TOLENTINO MANTILLA YASMIN                                                                           ","Descripcion":"MCDO LOS PORTALES PTO 64","Zona":"MCDO PORTALES - PARADA ZELA","Total":50.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0871317,"Longitud":-79.0026952,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"43606242","Nombre":"EUSTAQUIO MEDINA ROGER ADRIAN                                                                       ","Descripcion":"FCO DE ZELA 1332 PORVENIR","Zona":"MCDO PORTALES - PARADA ZELA","Total":1237.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0846299,"Longitud":-79.000873,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"44789440","Nombre":"CASTILLO LOYAGA, VICENTA BEATRIZ                                                                    ","Descripcion":"PROL.SANCHEZ CARRION S/N FRENTE CASETA DE SERENASGO","Zona":"RINCONADA CENTRAL - HUERTA BELLA - RAZURI","Total":337.65,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"44904554","Nombre":"TORRES MASLUCAN EDIN JOEL                                                                           ","Descripcion":"MERCADO PORTALES PTO 78-79 RINCONADA    ","Zona":"MCDO PORTALES - PARADA ZELA","Total":41.79,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0874008,"Longitud":-79.0024019,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"45282328","Nombre":"RODRIGUEZ PEREZ JUBY DICK                                                                           ","Descripcion":"LOS RUBÍES MZ1A LT 13 URB LA RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":109.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"46551939","Nombre":"BARRETOS BARRETOS CAROLYN                                                                           ","Descripcion":"MANCO INCA 636                          ","Zona":"PORVENIR CENTRAL - FERSAM","Total":92.13,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0846802,"Longitud":-78.9990261,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"46575324","Nombre":"GALVEZ SANCHEZ CLARA CELENI                                                                         ","Descripcion":"CALLE  SAN JOSÉ OLAYA 1377                                            ","Zona":"PORVENIR CENTRAL - FERSAM","Total":228.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.0834902,"Longitud":-79.0003457,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"48237002","Nombre":"OTINIANO VALDIVIEZO SHAROL MERLY                                                                    ","Descripcion":"CALLE LOS PINOS 683 URB RINCONADA                                     ","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":159.43,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0948894,"Longitud":-79.0030781,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"70235049","Nombre":"RUIZ ASUNCION, ALICIA JUDITH                                                                        ","Descripcion":"LAS TURMALINAS MZA G LOTE 20 LA RINCONADA","Zona":"LIBERTAD- NUEVA RINCONADA - PESQUEDA","Total":125.45,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.0925017,"Longitud":-78.9972106,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"70630470","Nombre":"RODRIGUEZ GUERRERO, LEANDRO  GUNTER                                                                 ","Descripcion":"MCD LOS PORTALES # 304 EL PORVENIR","Zona":"MCDO PORTALES - PARADA ZELA","Total":241.54,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0875382,"Longitud":-79.0028594,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"},{"FechaCc":"22/06/2026","Doi":"70864640","Nombre":"CARDENAS BRICEÑO LETICIA                                                                            ","Descripcion":"MOD PORTALES 218 RINCONADA              ","Zona":"MCDO PORTALES - PARADA ZELA","Total":144.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BRICEÑO SALDAÑA, CECILIA ESPERANZA","Latitud":-8.0875513,"Longitud":-79.0028403,"Placa":"T3V944","Conductor":"BLAS QUEZADA GILMER"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

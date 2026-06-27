@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"27/06/2026","Doi":"10190248700","Nombre":"ANTICONA VILLANUEVA POLIGNA VIRGEN                                                                  ","Descripcion":"PROGRESO 772 OTUZCO","Zona":"OTUZCO - II","Total":53.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10190307048","Nombre":"LOZANO CHAVEZ, FLOR AURORA                                                                          ","Descripcion":"BOLIVAR 190 OTUZCO FRNT MERCADP","Zona":"OTUZCO - I","Total":317.45,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9029895,"Longitud":-78.5631517,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10190331011","Nombre":"ANTICONA MINCHOLA, JAVIER                                                                           ","Descripcion":"CALL LIMA 722  OTUZCO FARMACIA POPULAR","Zona":"OTUZCO - I","Total":825.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10401692369","Nombre":"RUBIO ESCALON, EDGAR IBAN                                                                           ","Descripcion":"CAL TACNA 393 - OTUZCO","Zona":"OTUZCO - I","Total":1465.2,"Distribucion":"Dismar[2]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10416658094","Nombre":"MARQUINA LOZANO DINA ESTHER                                                                         ","Descripcion":"JR.ORBEGODO 484 FRENTE AL COMPLEJO SANTA ROSA OTUZCO                  ","Zona":"OTUZCO - I","Total":86.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9059089,"Longitud":-78.5638541,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10447965653","Nombre":"GONZALES AGUILAR, EBER ELI                                                                          ","Descripcion":"CALLE TACNA 338 OTUZCO","Zona":"OTUZCO - I","Total":337.24,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"10465733395","Nombre":"RODRIGUEZ  MENDOZA , SANTOS KELVER                                                                  ","Descripcion":"Psj tupac amaru 340 otuzco","Zona":"OTUZCO - I","Total":134.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9054427,"Longitud":-78.5610299,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"18075005","Nombre":"GUZMAN SANTOS, KELY  MARIA                                                                          ","Descripcion":"CALLE PROGRESO 308-A","Zona":"OTUZCO - I","Total":49.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19020352","Nombre":"GONZALES RODRIGUEZ MARIA                                                                            ","Descripcion":"LIMA 460 OTUZCO                                                       ","Zona":"OTUZCO - II","Total":140.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19021230","Nombre":"ZAVALETA ULLOA MARIA                                                                                ","Descripcion":"CL SAN ANTONIO MCDO PTO  55             ","Zona":"OTUZCO - I","Total":1323.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9036458,"Longitud":-78.5632389,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19022513","Nombre":"ANTICONA SANCHEZ, ROSA                                                                              ","Descripcion":"CALLE CACERES 347","Zona":"OTUZCO - II","Total":70.56,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19023544","Nombre":"NINAQUISPE PERALTA LOLA                                                                             ","Descripcion":"GRAU990OTUZCO","Zona":"OTUZCO - II","Total":126.81,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19025072","Nombre":"REYES EFRAIN RIOS                                                                                   ","Descripcion":"AV.TRUJILLO 395OTUZCO","Zona":"OTUZCO - II","Total":74.94,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19026076","Nombre":"NINAQUISPE ZAVALETA, RAQUEL                                                                         ","Descripcion":"CALLE JOSÉ BALTA 851 OTUZCO","Zona":"OTUZCO - II","Total":82.44,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19026617","Nombre":"SALIRROSAS GUZMAN AIDE                                                                              ","Descripcion":"JR. TRUJILLO 781 OTUZCO                                               ","Zona":"OTUZCO - II","Total":173.87,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19026863","Nombre":"ZAVALETA MALDONADO, DANIEL  ALMILFER                                                                ","Descripcion":"CALL. ATAHUALPA 1103   FRENTE  PARQUE DE LA CRUZ BLANCA","Zona":"OTUZCO - II","Total":218.82,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19026909","Nombre":"PONCE RODRIGUEZ ELVA                                                                                ","Descripcion":"CALLE TACNA 784  OTUZCO","Zona":"OTUZCO - II","Total":90.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19027981","Nombre":"RODRIGUEZ  CASTRO, EDIT  AZUCENA                                                                    ","Descripcion":"TACNA 713 OTUZCO","Zona":"OTUZCO - II","Total":28.53,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19028683","Nombre":"GUZMAN CORDOVA, ROSA UBALDINA                                                                       ","Descripcion":"CAL. ORBEGOSO308 - OTUZCO","Zona":"OTUZCO - I","Total":59.46,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9058154,"Longitud":-78.5649174,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19031659","Nombre":"ARGOMEDO RODRIGUEZ CORONA LIDIA                                                                     ","Descripcion":"MCDO OTUZCO PSTO 61                     ","Zona":"OTUZCO - I","Total":160.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9033499,"Longitud":-78.5634769,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19032015","Nombre":"ORDOÑES MINCHOLA, BREMILDA                                                                          ","Descripcion":"CALLE ATAHUALPA 399  ENTRE ATAHUALPA Y SANTA RITA","Zona":"OTUZCO - II","Total":78.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9041006,"Longitud":-78.5672952,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19032238","Nombre":"QUIPUSCO ANTICONA VILMA                                                                             ","Descripcion":"LOS ANGELES 112 OTUZCO","Zona":"OTUZCO - I","Total":61.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9030031,"Longitud":-78.5619229,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19032973","Nombre":"GONZALES RODRÍGUEZ MARILÚ                                                                           ","Descripcion":"ALFREDO GUTIERREZ 481 OTUZCO                                          ","Zona":"OTUZCO - II","Total":63.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19037605","Nombre":"AGUILAR DE BURGOS ANA YSABEL                                                                        ","Descripcion":"PSJ. LAS GARDENIAS 170 OTUZCO                                         ","Zona":"OTUZCO - II","Total":76.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9090143,"Longitud":-78.5635784,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19051972","Nombre":"ROSAS VICTORIA TOMAS                                                                                ","Descripcion":"SUCRE 369 (CON TAHUANTINSUYO) OTUZCO    ","Zona":"OTUZCO - I","Total":61.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9043016,"Longitud":-78.5597776,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19075411","Nombre":"BAZAN ESQUIVEL ELIA                                                                                 ","Descripcion":"ERMITA199OTUZCO                                                       ","Zona":"OTUZCO - II","Total":64.95,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9041403,"Longitud":-78.5683918,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19081131","Nombre":"VERDE ROSAS ESTHER                                                                                  ","Descripcion":"LIMA 188 OTUZCO","Zona":"OTUZCO - II","Total":440.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19088956","Nombre":"GUZMAN SALIRROSAS ELENA                                                                             ","Descripcion":"CALLE TRUJILLO 744 OTUZCO               ","Zona":"OTUZCO - II","Total":73.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19089143","Nombre":"QUIPUSCOA GAMBOA, OSCAR  BENJAMIN                                                                   ","Descripcion":"CALLE BOLOGNESI 510","Zona":"OTUZCO - I","Total":156.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9054254,"Longitud":-78.5632677,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19100545","Nombre":"GONZALES ARGOMEDO ROSA JANETT                                                                       ","Descripcion":"CALLE LIMA 296 OTUZCO","Zona":"OTUZCO - I","Total":181.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9073979,"Longitud":-78.5634675,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"19567159","Nombre":"BRICEÑO MARQUINA GLORIA                                                                             ","Descripcion":"BOLIVAR 305 SAN ANTONIOOTUZCO","Zona":"OTUZCO - I","Total":263.52,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9030662,"Longitud":-78.5639323,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"20439524040","Nombre":"DIMEPSA S.R.L.                                                                                      ","Descripcion":"CALLE LIMA 843 OTUZCO","Zona":"OTUZCO - II","Total":913.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"20612917966","Nombre":"INVERSIONES CARDALI S.A.C.                                                                          ","Descripcion":"JR. LIMA NRO. 860 OTUZCO","Zona":"OTUZCO - I","Total":377.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9034208,"Longitud":-78.5644583,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"20614072041","Nombre":"CORPORACION EMA S.A.C                                                                               ","Descripcion":"CALLE TACNA 344 OTUZCO","Zona":"OTUZCO - I","Total":455.01,"Distribucion":"Dismar[2]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"40040760","Nombre":"ARTEAGA CASTILLO MARLENY                                                                            ","Descripcion":"CALLE  MARIANO MELGAR  #  368   OTUZCO                                ","Zona":"OTUZCO - I","Total":45.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9052059,"Longitud":-78.5604928,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"40278934","Nombre":"MOYA GUZMAN, RORY  HEIZER                                                                           ","Descripcion":"ALFREDO GUTIÉRREZ 708 OTUZCO","Zona":"OTUZCO - II","Total":296.64,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9107724,"Longitud":-78.5662626,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"40343037","Nombre":"SOLANO GARCIA MARIA EDY                                                                             ","Descripcion":"COMPLEJO STA. ROSA PSTO  8","Zona":"OTUZCO - I","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"41471593","Nombre":"CONTRERAS DE LA CRUZ LAURA                                                                          ","Descripcion":"BOLOGNESI 434  OTUZCO                                                 ","Zona":"OTUZCO - I","Total":233.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9065559,"Longitud":-78.5630137,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"41973319","Nombre":"CHAVEZ MINCHOLA NANCI MARILU                                                                        ","Descripcion":"CALLE LIMA 318 OTUZCO                                                 ","Zona":"OTUZCO - I","Total":61.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9071387,"Longitud":-78.5634094,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"42048688","Nombre":"GUZMAN VALERIO NOEMI RUTH                                                                           ","Descripcion":"CALLE LIBERTAD 676 BARRIO CRUZ BLANCA - ","Zona":"OTUZCO - II","Total":50.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"42229558","Nombre":"GOMEZ CHICLAYO NORA ESTHER                                                                          ","Descripcion":"PASAJE MCDO 181 OTUZCO                  ","Zona":"OTUZCO - I","Total":94.38,"Distribucion":"Dismar[1]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9032475,"Longitud":-78.5637407,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"42229559","Nombre":"PEREZ ROJAS YULY DALILA                                                                             ","Descripcion":"CALLE TACNA 571 OTUZCO","Zona":"OTUZCO - II","Total":123.66,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9036592,"Longitud":-78.5630686,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"42437563","Nombre":"CORTIJO VILLAJULCA, YULI  MELINA                                                                    ","Descripcion":"Call lima 412 otuzco","Zona":"OTUZCO - I","Total":64.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9064746,"Longitud":-78.5635413,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"42669257","Nombre":"RODRIGUEZ SALINAS SANTOS                                                                            ","Descripcion":"SAN MARTIN 184 OTUZCO","Zona":"OTUZCO - II","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"43143583","Nombre":"REYES RODRIGUEZ NANCY NORI                                                                          ","Descripcion":"LA HERMITA 1300 OTUZCO","Zona":"OTUZCO - II","Total":195.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"43748412","Nombre":"CABRERA GARCIA, SANTOS  MARILU                                                                      ","Descripcion":"Av Trujillo 320 otuzco","Zona":"OTUZCO - II","Total":127.21,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"43990649","Nombre":"AGUILAR SANDOVAL, NORMA JUANA                                                                       ","Descripcion":"MZ. K LT. 26 LOS ANGELES 244 OTUZCO","Zona":"OTUZCO - I","Total":85.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9041775,"Longitud":-78.560747,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"45037430","Nombre":"UMBO ACARO, CONRRADO                                                                                ","Descripcion":"TAHUANTINSUYO 886 OTUZCO ESPALDA DEL ESTADIO","Zona":"OTUZCO - I","Total":162.88,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"45226851","Nombre":"ROSAS RUBIO EDITA YAKELINE                                                                          ","Descripcion":"ALFREDO GUTIERREZ 306 STA ROSA OTUZCO   ","Zona":"OTUZCO - II","Total":129.18,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"45253112","Nombre":"GOMEZ CHAUPE, YURI  MILENA                                                                          ","Descripcion":"CALLE TRUJILLO 1399 OTUZCO","Zona":"OTUZCO - II","Total":201.26,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"45324736","Nombre":"GUTIERREZ MORALES ROSITA MELVA                                                                      ","Descripcion":"BALTA 989 OTUZCO                        ","Zona":"OTUZCO - II","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":-7.9017596,"Longitud":-78.5669723,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"46610401","Nombre":"GUTIERREZ  IBAÑEZ, LEYDI  ROSY                                                                      ","Descripcion":"LOS ANGELES 200 OTUZCO","Zona":"OTUZCO - I","Total":262.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9039962,"Longitud":-78.5609902,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"46737110","Nombre":"VILLANUEVA VIDAL ANABEL ROSMERY                                                                     ","Descripcion":"MCDO CENTRAL PTO 03 OTUZCO                                            ","Zona":"OTUZCO - I","Total":280.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"48135711","Nombre":"GAMBOA GARCIA YESICA PAOLA                                                                          ","Descripcion":"RAMÓN CASTILLA 181 OTUZCO BOTICA PIEDRITAS","Zona":"OTUZCO - I","Total":490.2,"Distribucion":"Dismar[3]-Lider[0]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"70168762","Nombre":"VIDAL RODRIGUEZ, DEYVI  MARILI                                                                      ","Descripcion":"HERMITA 698 OTUZCO","Zona":"OTUZCO - II","Total":192.74,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"70507552","Nombre":"ULLOA JUAREZ SHEYLA                                                                                 ","Descripcion":"CALLE TRUJILLO 398 OTUZCO","Zona":"OTUZCO - II","Total":79.67,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"70507559","Nombre":"ALVAREZ LOZANO, ADELITA MARILU                                                                      ","Descripcion":"CALLE CÁCERES 769 OTUZCO","Zona":"OTUZCO - II","Total":25.41,"Distribucion":"Dismar[0]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"72162955","Nombre":"DIAZ ANGULO SHEYLA MAYTE                                                                            ","Descripcion":"CALLE TRUJILLO 847 BARRIO CRUZ BLANCA OT","Zona":"OTUZCO - II","Total":367.14,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"75019063","Nombre":"HURTADO QUIPUSCOA EVELYN TALITA                                                                     ","Descripcion":"PASAJE SAN JUAN 117 BARRIO SANTA ROSA","Zona":"OTUZCO - II","Total":194.08,"Distribucion":"Dismar[1]-Lider[1]","Rv":"RODRIGUEZ GOMEZ, JOSE LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"},{"FechaCc":"27/06/2026","Doi":"76973351","Nombre":"ALTUNA TORRES, JENNY  ROCIO                                                                         ","Descripcion":"LOS ANDES 460 OTUZCO","Zona":"OTUZCO - I","Total":158.88,"Distribucion":"Dismar[0]-Lider[1]","Rv":"AGUILAR GOMEZ, MELBIN DAVID","Latitud":-7.9041095,"Longitud":-78.5601607,"Placa":"T4N851","Conductor":"GUEVARA MARCELO ALADINO FRANCISCO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

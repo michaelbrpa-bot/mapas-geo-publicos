@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"29/06/2026","Doi":"030256366","Nombre":"ORTEAGA CORONEL , LORENA                                                                            ","Descripcion":"PEDRO CACESERES S/N -  SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":44.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.1805892,"Longitud":-79.4360298,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"10191972410","Nombre":"TORRES ROMERO YISELA ISABEL                                                                         ","Descripcion":"CALLE TRIUNFO 1885-CHEPEN","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":41.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"10192031651","Nombre":"MALCA CRUZADO DELMINA                                                                               ","Descripcion":"CALLE AMERICA245-CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":65.71,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":-7.2198611,"Longitud":-79.4289727,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"10192079085","Nombre":"HERNANDEZ QUISPE MARIA ISABEL                                                                       ","Descripcion":"BOLOGNESI138 SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":47.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":-7.1816053,"Longitud":-79.4357965,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"10193378914","Nombre":"CHAVARRY CALDERON MARITHA ROSANA                                                                    ","Descripcion":"C.PROGRESO1910-CHEPEN","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":183.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"10753750","Nombre":"CLAVO CHAVEZ, JOSE ANDRES                                                                           ","Descripcion":"CLL. TRIUNFO 280","Zona":"CHEPEN CEMENTERIO","Total":97.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19191528","Nombre":"CALDERON ZELADA DELIA                                                                               ","Descripcion":"RENOVACION221 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":91.2,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2285764,"Longitud":-79.4284155,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19194566","Nombre":"SUAREZ CARRANZA ANGEL CATALINO                                                                      ","Descripcion":"PROGRESO1181-CHEPEN","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19195881","Nombre":"DEZA TRIAY, MARIA ELIZABETH                                                                         ","Descripcion":"PROLONG. SAN SEBASTIAN N° 150 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":18.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19195960","Nombre":"AREVALO LOZANO, AMALIA                                                                              ","Descripcion":"CLL. RENOVACION 288 - CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":27.85,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":-7.219861,"Longitud":-79.4289726,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19199078","Nombre":"CASTILLO NINAQUISPE FLOR AVERIA                                                                     ","Descripcion":"PROLONG SANSEBASTIAN209CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":32.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":-7.2198612,"Longitud":-79.428973,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19199908","Nombre":"CACEDA DE PAUCAR CARMEN DINA                                                                        ","Descripcion":"SAN SEBASTIAN 1470-CHEPEN","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":42.3,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19200309","Nombre":"QUISPE CAMPOS PILAR                                                                                 ","Descripcion":"PROGRESO411 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":41.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":-7.2198609,"Longitud":-79.4289724,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19205636","Nombre":"ALVITREZ HERNANDEZ LUZ                                                                              ","Descripcion":"AV. 10 DE MARZO MZ-D LT-11-SANTA CECILIA","Zona":"SAN JOSE DE MORO - SALVADOR","Total":93.48,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.1919198,"Longitud":-79.4306629,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19208006","Nombre":"QUIROZ FLORES MARIELA FRANCISCA                                                                     ","Descripcion":"SOROCHUCO599-SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":127.83,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.179175,"Longitud":-79.4396249,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19209881","Nombre":"SOBERON ALZAMORA EDITA                                                                              ","Descripcion":"CALL. PROGRESO #1175","Zona":"PACANGA","Total":55.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19210346","Nombre":"SILVIA  BECERRA, LITA                                                                               ","Descripcion":"JR LIBERTAD 690","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":143.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19211470","Nombre":"ROMERO DE LA CRUZ MARIA                                                                             ","Descripcion":"TRIUNFO 525 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":50.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19251321","Nombre":"CARHUANAMBO  LEZAMA, GUADALUPE  ELISA                                                               ","Descripcion":"PROLONGACION TRIUNFO#140","Zona":"CHEPEN CEMENTERIO","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2198611,"Longitud":-79.4289727,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19320712","Nombre":"HERNANDEZ CHOLAN LUIS ALBERTO                                                                       ","Descripcion":"CLL.PROGRESO571-CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":211.68,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19323923","Nombre":"ABANTO MEJIA, RUTH MADELEINE                                                                        ","Descripcion":"CALLE MANUEL SOANE 186","Zona":"CHEPEN CEMENTERIO","Total":35.65,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2339197,"Longitud":-79.4219487,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19324337","Nombre":"CHICLAYO  SEGURA, NARIA VIOLETA                                                                     ","Descripcion":"AV PEDRO CACERES N° 329 - SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":99.45,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.1733169,"Longitud":-79.4391912,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19329137","Nombre":"SUAREZ  FLOREZ , SILVIA                                                                             ","Descripcion":"CLL TRINIDAD #701 - CHEPEN","Zona":"CHEPEN A PARTE ALTA - MCDOS","Total":61.05,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19330078","Nombre":"PALACIOS FLORES AMERICO                                                                             ","Descripcion":"TRINIDAD633-CHEPEN","Zona":"PACANGA","Total":37.32,"Distribucion":"Dismar[1]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19333003","Nombre":"FERNANDEZ TERRONES, JUAN MIGUEL                                                                     ","Descripcion":"AV. MANUEL SOANE 291 - CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":107.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19334022","Nombre":"VASQUEZ GIL, MARIA CLAUDIA                                                                          ","Descripcion":"LAS FLORES MZ B LT 12 A.H - SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":54.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.1775732,"Longitud":-79.4377842,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19336139","Nombre":"ACUÑA GALVEZ, KARIM JOUDITH                                                                         ","Descripcion":"JR SUCRE NRO 757 CHEPEN","Zona":"PACANGA","Total":135.8,"Distribucion":"Dismar[0]-Lider[1]","Rv":"MOZOMBITE LOPEZ, JOSE ANTONIO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19336669","Nombre":"SOBERON BALCAZAR, MARIA MAGDALENA                                                                   ","Descripcion":"CALLE PROGRESO NRO 693 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":215.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"19336786","Nombre":"CORREA MEDINA ANIBAL                                                                                ","Descripcion":"JR. CHOTA310 (ESQUINA) SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":155.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":-7.1798281,"Longitud":-79.4370066,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"20612806099","Nombre":"GMA NEGOCIOS & INVERSIONES SAC                                                                      ","Descripcion":"CLL SOROCHUCO #550 AA.HH - SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":83.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"40034842","Nombre":"DOMINGUEZ ROMERO, NOEMI LUISA                                                                       ","Descripcion":"CALLE LAS FLORES MZ E  LT 5 SAN JUAN DE DIOS","Zona":"CHEPEN CEMENTERIO","Total":185.15,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"40157623","Nombre":"BEMITES CAMACHO ROCIO DEL PILAR                                                                     ","Descripcion":"CALLE MANUEL SEONA NRO 254 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":9.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"40756856","Nombre":"VILLA  CASTAÑEDA , MAGALY                                                                           ","Descripcion":"PROLONGACION SAN SEBASTIAN 140","Zona":"CHEPEN CEMENTERIO","Total":80.44,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"43041174","Nombre":"URRUTIA GURVARA VILMA                                                                               ","Descripcion":"MZ A LTE 088 AAHH SANTA CECILIA","Zona":"SAN JOSE DE MORO - SALVADOR","Total":42.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.191915,"Longitud":-79.4306662,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"43090379","Nombre":"DELGADO DEZA ANGELICA                                                                               ","Descripcion":"PROLONGACIÓN SAN SEBASTIÁN 150","Zona":"CHEPEN CEMENTERIO","Total":18.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"43694652","Nombre":"CHACON CHILON MARGARITA                                                                             ","Descripcion":"CALLE REDUCTO127 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":83.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2198611,"Longitud":-79.428973,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"45453953","Nombre":"BARBOZA MENDOZA JORGE LUIS                                                                          ","Descripcion":"LOS MOCHICAS SN-SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":79.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":-7.1791268,"Longitud":-79.439193,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"47460175","Nombre":"HUAYTALLA GONZALES, CINTHYA                                                                         ","Descripcion":"MZ S  LT 05 SAN JUAN DE DIOS","Zona":"CHEPEN CEMENTERIO","Total":27.65,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"47711740","Nombre":"TUMES  DIAZ, MARIA  DEL PILAR                                                                       ","Descripcion":"CLL RICARD PALMA #486 - SAN JOSE DE MORO","Zona":"SAN JOSE DE MORO - SALVADOR","Total":147.42,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.182917,"Longitud":-79.4358513,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE  ARMANDO"},{"FechaCc":"29/06/2026","Doi":"74625772","Nombre":"PISFIL EFFIO, ALICIA JENNIFER                                                                       ","Descripcion":"JR GRAU NRO 806 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":52.89,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":-7.22856,"Longitud":-79.4284,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"77331918","Nombre":"SEMINARIO GUANILO JULIANA CAROLINE                                                                  ","Descripcion":"MANUEL SEOANE269-CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":106.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"},{"FechaCc":"29/06/2026","Doi":"80470931","Nombre":"DILAS CHICCHON NANCY                                                                                ","Descripcion":"JR.INCA498 CHEPEN","Zona":"CHEPEN CEMENTERIO","Total":13.45,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ZEGARRA ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"F4P730","Conductor":"VILLOSLADA ROMERO, JORGE ARMANDO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

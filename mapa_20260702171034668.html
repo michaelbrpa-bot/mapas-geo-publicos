@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"02/07/2026","Doi":"10179842969","Nombre":"ALCANTARA RODRIGUEZ MARIA TERESA                                                                    ","Descripcion":"LOS LAURELES 425 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":55.21,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10179893016","Nombre":"COSAVALENTE PRETEL MARIA MICAELA                                                                    ","Descripcion":"PASAJE JIRARDOT 1772 ESPERANZA BAJA                                   ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":50.84,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10179906584","Nombre":"POLO SANTISTEBAN ANGEL                                                                              ","Descripcion":"MARCO DE PONT 1818 ESPERANZA BAJA       ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":207.99,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10180551200","Nombre":"REYES  PARDO , EUGENIO                                                                              ","Descripcion":"HUAMACHIRI 512 - ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":74.58,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10180573581","Nombre":"DIAZ PEREYRA NORA HAYDEE                                                                            ","Descripcion":"BARTOLOME DE LAS CASAS NRO1412LA ESPERANZA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":52.08,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10181829384","Nombre":"MAURICIO YUPANQUI ESMILA ILARIA                                                                     ","Descripcion":"ATLANTIDA 1063 LA ESPERANZA                                           ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":39.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10181836666","Nombre":"BENITES ATIAJA , ANA                                                                                ","Descripcion":"LOS CEDROS 490  ESPERANZA BAJA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":55.81,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10188758181","Nombre":"MACO NUNJA ANDRES AVELINO                                                                           ","Descripcion":"JRMARCO DEL PONT NRO1479 INTAPTE BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":61.64,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10272832728","Nombre":"COTRINA VEGA NELIDA                                                                                 ","Descripcion":"JOAQUIN OLMEDO 254 ESPERANZA   ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":74.06,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"10401870241","Nombre":"FERNANDEZ  LOPEZ , LILY  ROSA                                                                       ","Descripcion":"Huamachiri 280","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":68.24,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10402390692","Nombre":"MORENO RODRIGUEZ VILMA TRINIDAD                                                                     ","Descripcion":"LOS LAURELES 400 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":237.66,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10429704192","Nombre":"TANTALEAN SALAZAR BLANCA                                                                            ","Descripcion":"SANLUCAS305ESPERANZA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":68.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.0720256,"Longitud":-79.0574912,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"10459683033","Nombre":"IPARRAGUIRRE BACA MILTON ADAEL                                                                      ","Descripcion":"JR INDICO 1016 ESPERANZA BAJA           ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":134.98,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17972366","Nombre":"TOLENTINO CULQUITANTE JORGE LUIS                                                                    ","Descripcion":"ANTONIO GALAN 2055 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":89.03,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17979692","Nombre":"RIOS SAAVEDRA, RUTY  MARLENI                                                                        ","Descripcion":"Marco del pont 1315.","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":35.89,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17980650","Nombre":"QUISPE ALVARADO AMALIA ELINA                                                                        ","Descripcion":"GUADALUPE VICTORIA 918 ESPERANZA BAJA                                 ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":97.17,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17984590","Nombre":"DAZA YUPANQUI MARIA MERITA                                                                          ","Descripcion":"GARCILAZO DE LA VEGA 336 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":42.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17986074","Nombre":"DE LA CRUZ LOPEZ MARCIANO MODESTO                                                                   ","Descripcion":"MARCO DEL PONT 1831 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":51.24,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"17995477","Nombre":"SOLON RODRIGUEZ LILIAN NOEMI                                                                        ","Descripcion":"JUNIN 231 SANTA VERONICA ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":153.87,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"18027220","Nombre":"VARAS RODRIGUEZ JULIA CAROLINA                                                                      ","Descripcion":"AV RIVADAVIA 497 ESPERANZA BAJA         ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":27.8,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"18029476","Nombre":"SILVA ROJAS KELLY                                                                                   ","Descripcion":"GARCILAZO DE LA VEGA 483 ESPARANZA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":62.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"18052514","Nombre":"VITERI BRICEÑO ROSA                                                                                 ","Descripcion":"MARCODE POINT 1996LA ESPERANZA BAJALA ESPERANZALA ESPERANZA           ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":80.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"18104445","Nombre":"JIMENEZ  GALLARDO, MARITZA  ELIZABETH                                                               ","Descripcion":"JOSÉ ANTONIO GALÁN 1880","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":83.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"18146170","Nombre":"LLANOS PAZ IRENE                                                                                    ","Descripcion":"ESMERALDA401LA ESPERANZA                                              ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":30.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"18201953","Nombre":"NORIEGA ALAYO CARMEN ROSA                                                                           ","Descripcion":"06 DE ENERO 165 LA ESPERANZA BAJA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":71.04,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"20609557151","Nombre":"TIENDAS PAWA S.A.C.                                                                                 ","Descripcion":"CAL.GUADALUPE VICTORIA 211 -  LA ESPERAN","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":216.47,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"20611487453","Nombre":"CONSORCIO BARON S.R.L.                                                                              ","Descripcion":"SANTA MAGDALENA 386 ESPERANZA BAJA      ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":57.29,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"27745178","Nombre":"ROJAS PAREDES ANTONIO                                                                               ","Descripcion":"LOS CEDROS 909 - LA ESPERANZA                                         ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":96.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"40301139","Nombre":"NIEVES VERA, NIEVES                                                                                 ","Descripcion":"Jr. PedroMurillo 1113-esperanza baja 3","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":42.41,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"40345899","Nombre":"GALLARDO HUAMAN, BENITA                                                                             ","Descripcion":"SAN PEDRO 405","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":26.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"40800408","Nombre":"LEYVA  SALAS, CELINA  HAYDEE                                                                        ","Descripcion":"CALLE INDICO 989  LA ESPERANZA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":142.36,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"41070048","Nombre":"MENDOZA CALDERON ZENAIDA                                                                            ","Descripcion":"JIRÓN HEREDIA 1031 ESPERANZA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":79.18,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"41808431","Nombre":"RUIZ OTINIANO EVANGELINA                                                                            ","Descripcion":"ESQ. LOS REYES 198 Y EL CAIRO LA ESPERANZA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":54.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"42076519","Nombre":"CHAVEZ CRESPIN, JANET ROXANA                                                                        ","Descripcion":"SAN SALVADOR 151 ESPERANZA BAJA COSTADO CEVICHERIA CANGEREJO LOCO","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":56.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"42430252","Nombre":"KRISTELL MONTALVAN ZAMBRANO                                                                         ","Descripcion":"GUADALUPE VICTORIA 495-A ESPERANZA PARTE BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":32.71,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"42845890","Nombre":"BACA BECERRA LADY YSABEL                                                                            ","Descripcion":"JIRON ATLÁNTIDA 690 ESPERANZA PARTE BAJA                              ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":69.47,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"43871823","Nombre":"JESSICA ARANA YUPANQUI                                                                              ","Descripcion":"CHACABUCO 1256 ESPERANZA BAJA","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":56.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"44809701","Nombre":"OBANDO ROMERO LADY FIORELLA                                                                         ","Descripcion":"SAN PEDRO 268 LA ESPERANZA BAJA                                       ","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":42.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.072355,"Longitud":-79.0567176,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"48511368","Nombre":"ZARATE RODRIGUEZ, JESSICA  ROSMERY                                                                  ","Descripcion":"6 ENERO 417 LA ESPERANZA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":83.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"70306908","Nombre":"ALCANTARA  INCA, CESAR  ELI                                                                         ","Descripcion":"CALLE SAN PABLO 559-A LA ESPERANZA","Zona":"ESPERANZA BAJA II INDOAMERICA","Total":54.6,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"70778184","Nombre":"HUMBO BLANCO SHIRLEY                                                                                ","Descripcion":"JOAQUÍN OLMEDO 453 ESPERANZA BAJA       ","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":71.09,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"},{"FechaCc":"02/07/2026","Doi":"74166586","Nombre":"RAVELO MENDEZ, KAREN LIZETH                                                                         ","Descripcion":"MICAELA BASTIDAS 1407 ESPERANZA BAJA FRTE  CEVICHERIA CANGREJO LOCO","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":53.82,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS, VICTOR MANUEL"},{"FechaCc":"02/07/2026","Doi":"80401166","Nombre":"SALAZAR ZAVALA, MARLENY  DORA                                                                       ","Descripcion":"Carabobo 100.","Zona":"ESPERANZA BAJA I HASTA EGIPTO","Total":51.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2I918","Conductor":"TORRES ROJAS VICTOR"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

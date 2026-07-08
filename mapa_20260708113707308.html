@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"07/07/2026","Doi":"00963480","Nombre":"CONTRERAS DE MENDOZA AMANDA                                                                         ","Descripcion":"CALLESANJUAN531ALTOMOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":37.08,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.17975,"Longitud":-78.995131,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"05389955","Nombre":"FATAMA  TECCO, NORITA                                                                               ","Descripcion":"MCDO LUCHADORAS PTO 02 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":90.82,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10086439005","Nombre":"QUISPE CISNEROS YDA MAGALI                                                                          ","Descripcion":"CALLE PACASMAYO 656-648 SALAVERRY                                     ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":126.7,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10180148871","Nombre":"MONTOYA SANCHEZ JOSE WALTER                                                                         ","Descripcion":"AV. SAN JOSE 130 ALTO MOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":85.81,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1751237,"Longitud":-78.9958054,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10180247004","Nombre":"CABALLERO VASQUEZ NILDA MARTINA                                                                     ","Descripcion":"CALLE LA MARINA 698 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":68.67,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10180254698","Nombre":"REUPO CUELLO JOSE ANDRES                                                                            ","Descripcion":"ORBEGOSO$496 SALAVERRY                                                ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":160.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10180265991","Nombre":"CARRILLO PEREZ ROBERT VICENTE                                                                       ","Descripcion":"GAMARRA 701SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":34.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":-8.2222935,"Longitud":-78.9743586,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10181717616","Nombre":"MONTERO ESTEVES JOSE EDSON                                                                          ","Descripcion":"CALLE MANUEL SOANE 145 MZ 09 LT 03 AA HH","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":130.91,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10190850990","Nombre":"VEGA CEDANO MIRIA ESPERANZA                                                                         ","Descripcion":"MZ K LT 15 AA. HH. FUJIMORI 2 SECTOR","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":29.05,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10400019679","Nombre":"ANGULO ROMERO MILENA MARGOT                                                                         ","Descripcion":"LIBERTAD 710 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":12.56,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10429570901","Nombre":"EUSTAQUIO ZAVALETA KELY                                                                             ","Descripcion":"CAL. SANTA ROSA MZA. 17 LOTE. 03 SECT ALTO MOCHE 1ER PARAD","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":177.96,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1781933,"Longitud":-78.9959148,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10434123815","Nombre":"ROSALES GARCIA LUIS AUGUSTO                                                                         ","Descripcion":"MCDO. SANTA ROSA MZA. I INT. 8 A.H. AURORA DIAZ II (SECCION ABARROTES)","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":338.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10704051285","Nombre":"AZUCENA MIRLEY, MORALES SILVA                                                                       ","Descripcion":"VILLA MARINA MZ K 4 LT 18","Zona":"ALTO MOCHE II - VILLA MARINA","Total":102.34,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"10714669597","Nombre":"SAMANA RODRIGUEZ, JUAN CARLOS                                                                       ","Descripcion":"AV. SAN JOSE 774 ALTO MOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":64.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.182308,"Longitud":-78.9880316,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17858500","Nombre":"SOTO MEDINA NIDIA GLADIS MARLEN                                                                     ","Descripcion":"SANTA ROSA #450 - ALTO MOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":60.91,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1791488,"Longitud":-78.995452,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17870490","Nombre":"CHARCAPE ASENCIO MARÍA TERESA                                                                       ","Descripcion":"SAN PEDRO 202 ALTO MOCHE                                              ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":104.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1795697,"Longitud":-78.9963297,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17870562","Nombre":"RODRIGUEZ VALDIVIEZO WILFREDO                                                                       ","Descripcion":"AV JUAN PABLO 715 ALTO MOCHE                                          ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":155.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.184292,"Longitud":-78.9910634,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17884510","Nombre":"ZAVALETA REYES ESMELDA                                                                              ","Descripcion":"MZ H4 LT 3 VILLA MARINA ALTO MOCHE","Zona":"ALTO MOCHE II - VILLA MARINA","Total":112.61,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1920969,"Longitud":-78.9809826,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17887435","Nombre":"RODRIGUEZ CERNA YSIDORA                                                                             ","Descripcion":"SAN ANDRÉS 764 ALTO MOCHE               ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":208.95,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1813278,"Longitud":-78.9908194,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17887499","Nombre":"CHAMORRO CONDOGURI ARMIDA                                                                           ","Descripcion":"CROLUNGO 163ALTO MOCHEMOCHEMOCHEMOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":212.34,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1817391,"Longitud":-78.9955609,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17946915","Nombre":"QUISPE CABALLERO JUANA                                                                              ","Descripcion":"SAN MARTIN 214  B  ALTO MOCHE                                         ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":68.52,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.180595,"Longitud":-78.9954317,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"17960855","Nombre":"GALVEZ PRADO OLGA ZULEMA                                                                            ","Descripcion":"SAN MARTIN MZ.55 LT.1 ALTO MOCHE                                      ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":39.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1849202,"Longitud":-78.9898317,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18013170","Nombre":"QUIROZ LEON IRENE                                                                                   ","Descripcion":"SANTACATALINA593ALTOMOCHEMOCHEMOCHEMOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":81.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1796276,"Longitud":-78.9919749,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18014143","Nombre":"VERA FERNADEZ FRANCISCO JUAN                                                                        ","Descripcion":"SAN FRANCISCO 371 ALTO MOCHE                                          ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":39.75,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1792715,"Longitud":-78.9952306,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18016501","Nombre":"CRUZ VASQUEZ MARCELINA HERMINIA                                                                     ","Descripcion":"MCD SALAVERRYPUERTAN 27 ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":76.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18018316","Nombre":"MEDINA PAREDES ANA VICTORIA                                                                         ","Descripcion":"AV.SANJOSE4904TOPARADEROMOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":232.35,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1784086,"Longitud":-78.9929786,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18024346","Nombre":"BETANCURT DE SUSONI JULIA                                                                           ","Descripcion":"MCD.SALAVERRY PTO 58","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":62.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18025792","Nombre":"CAMPOS FLORES LUCILA                                                                                ","Descripcion":"MCDO.SALAVERRYS/N","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":29.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18026495","Nombre":"REUPO  ARANGURI, ADELA  DEL PILAR                                                                   ","Descripcion":"CALLE ORBEGOSO 496 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":31.47,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18047963","Nombre":"PEREZ GARCIA DE PULIDO ARTEMIA                                                                      ","Descripcion":"MERCADO MIRAMAR SN(PUERTA SANTA ISABEL)                               ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":91.8,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1830588,"Longitud":-78.9945229,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18128965","Nombre":"MIRO QUEZADA ZAVALETA, KARLA GISELA                                                                 ","Descripcion":"SUCRE 591 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":102.92,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18171782","Nombre":"CUENCA POLO SONIA LUPE                                                                              ","Descripcion":"ANTENOR ORREGO 160 SALAVERRYSALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":72.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"18228837","Nombre":"RIVERA HILARIO, FELIPE ANTENOR                                                                      ","Descripcion":"CALLE SANTA ROSA 1109 ALTO MOCHE","Zona":"ALTO MOCHE II - VILLA MARINA","Total":32.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1844228,"Longitud":-78.9878452,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"19038267","Nombre":"CASTILLO GARCIA MARIBEL                                                                             ","Descripcion":"MZ G LT 2 FUJIMORI FUJIMORI-SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":69.85,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"19089809","Nombre":"ARROYO VILLARREAL BACELIZA TEONILA                                                                  ","Descripcion":"MCDO. MIRAMAR PTO. 15","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":1332.25,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1835663,"Longitud":-78.9938049,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"19098114","Nombre":"PLASENCIA VILLEGAS JOSE ANTONIO                                                                     ","Descripcion":"CALLE TRUJILLO 557 SALAVERRY                                          ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":768.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"23225132","Nombre":"ASCUES PITUE ALEJANDRA                                                                              ","Descripcion":"C. SAN MARTIN MZ 39 LT 20 A                                           ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":37.5,"Distribucion":"Dismar[0]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1842828,"Longitud":-78.9908092,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"40636069","Nombre":"LEYVA PEREZ NERY GYONANY                                                                            ","Descripcion":"DUNAS MZ 79 LT2                                                       ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":177.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1858493,"Longitud":-78.9923301,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"40842965","Nombre":"BURGOS ALVAREZ  VIRGILIO                                                                            ","Descripcion":"MDO.MIRAMAR # 12  ALTO MOCHE","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":578.97,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1836166,"Longitud":-78.9941572,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"42449524","Nombre":"ZAVALETA MANTILLA GUILDA ANABEL                                                                     ","Descripcion":"LIBERTAD 618                                                          ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":92.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"42595053","Nombre":"ESPARZA ABANTO ELENA                                                                                ","Descripcion":"SANTA MARIA #756 (BODEGA VALENTINA) CERCA FERRETERIA LINDA            ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":52.56,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1815583,"Longitud":-78.9954793,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"43184480","Nombre":"VILLANUEVA ALVA DE GOMEZ YESSENIA DEL PILAR                                                         ","Descripcion":"SAN MARTIN MZ V LT 16 ALTO MOCHE        ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":36.84,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"43215764","Nombre":"ROJAS VALLE, JOSE  ORLANDO                                                                          ","Descripcion":"MZ K6 LT 1 VILLA MARINA AV PRINCIPAL AL COSTADO LIB. LUQUE","Zona":"ALTO MOCHE II - VILLA MARINA","Total":73.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1910952,"Longitud":-78.9813208,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"43501048","Nombre":"BETANCOURT LESCANO BILLY JOEL                                                                       ","Descripcion":"MANUEL COX MAZ4 LOTE 12                                               ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":436.39,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"44771613","Nombre":"INGRID CAROLAINE, NEYRA BAYONA                                                                      ","Descripcion":"MZ G10 LOTE 33 VILLA MARINA","Zona":"ALTO MOCHE II - VILLA MARINA","Total":150.41,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1934681,"Longitud":-78.9825165,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"44774054","Nombre":"MIGUEL ANGEL PALOMINO ALAYO                                                                         ","Descripcion":"VICTOR RAUL MZ 14 LT 9 ALTO MOCHE       ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":31.1,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1810831,"Longitud":-78.9917491,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"44802999","Nombre":"CASTRO VERONA JENNIE DENISSE                                                                        ","Descripcion":"MERCADO MIRAMAR PUESTO 5 PABELLÓN 9                                   ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":30.51,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1827895,"Longitud":-78.993332,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"44951510","Nombre":"FLORES ARMAS, MARIA  ESTHER                                                                         ","Descripcion":"FUJIMORI FUJIMORI MZ M LOTE 6 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":138.37,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"46276545","Nombre":"CASTILLO SALVATIERRA NILDA                                                                          ","Descripcion":"VILLA MARÍNA CALLE C  MZ.C N1 LTE 35                                  ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":39.46,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1906793,"Longitud":-78.9827537,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"46605371","Nombre":"BAUCAÑAN MALDONADO HENRY                                                                            ","Descripcion":"ESQ. ORBEGOZO Y TRUJI FRENTE MCDO.SALAV","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":270.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"47126814","Nombre":"LOPEZ MEDINA, NOEMI DIANIRE                                                                         ","Descripcion":"VILLA MARINA MZ V 4 LT 19","Zona":"ALTO MOCHE II - VILLA MARINA","Total":111.54,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"47956844","Nombre":"CALDERON VALDERRAMA MARIA MAGDALENA                                                                 ","Descripcion":"CALLÉ SAN MARTINMZ5 LT10 VILLA MARINA                                 ","Zona":"ALTO MOCHE II - VILLA MARINA","Total":198.25,"Distribucion":"Dismar[1]-Lider[1]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1898087,"Longitud":-78.9834391,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"70012057","Nombre":"ASCOY RODRIGUEZ JULIECY ELIZABETH                                                                   ","Descripcion":"LA RIVERA713 SALAVERRY","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":22.35,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"70012403","Nombre":"KARINA ATOCHE VENEGAS                                                                               ","Descripcion":"LA MAR 88 SALAVARRY                     ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":143.29,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"70856743","Nombre":"LOPEZ MARTINEZ MARIA                                                                                ","Descripcion":"LIBERTAD CON ORBEGOSO (ESQUINA MERCADO)                               ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":68.19,"Distribucion":"Dismar[1]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"70942944","Nombre":"VALDERRAMA CUBA, DAVID DARIO                                                                        ","Descripcion":"CALLE SAN MARTIN 731 ALTO MOCHE","Zona":"ALTO MOCHE II - VILLA MARINA","Total":79.88,"Distribucion":"Dismar[1]-Lider[0]","Rv":"BARDALES PURIZAGA, ROLANDO CARLOS","Latitud":-8.1844076,"Longitud":-78.9906192,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"73035729","Nombre":"OTINIANO GERONIMO ANGIE MIRELLA                                                                     ","Descripcion":"SAN ANDRES # 309 AL COSTADO DEL TEMPLO BETHEL 2DO PARADERO            ","Zona":"ALTO MOCHE - MCDO MIRAMAR","Total":180.61,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CASTAÑEDA JIMENEZ, JOSE","Latitud":-8.1784086,"Longitud":-78.9929786,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"74158480","Nombre":"GARCIA CISNEROS NICOLLE ALEXANDRA                                                                   ","Descripcion":"AV PETRO PERU MZ E LT 7 SALAVERRY                                     ","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":88.36,"Distribucion":"Dismar[1]-Lider[0]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"},{"FechaCc":"07/07/2026","Doi":"80168302","Nombre":"SANTILLAN TUMBAJULCA, CECILIA  BEATRIZ                                                              ","Descripcion":"CALLE ORBEGOZO PUERTA 1 MCDO MUNICIPAL DE ABASTOS","Zona":"SALAVERRY  I y II - AURORA DIAZ ","Total":23.25,"Distribucion":"Dismar[0]-Lider[1]","Rv":"SILVA CRUZ, VIOLETA FLOR","Latitud":0.0,"Longitud":0.0,"Placa":"T4N851","Conductor":"LAZARO VASQUEZ, JORGE WILDER"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

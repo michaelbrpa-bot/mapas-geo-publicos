@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"08/07/2026","Doi":"10009066328","Nombre":"CORAL FALCON, ROCIO                                                                                 ","Descripcion":"CALLE BACA FLOR 223 URB SANTO DOMINGUITO","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":130.07,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1128216,"Longitud":-79.0126926,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"10178690065","Nombre":"MORALES ZAVALETA SEMIRAMIZ                                                                          ","Descripcion":"RAZURI 395  VISTA ALEGRE                ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":126.26,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1411592,"Longitud":-79.0487862,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"10178875502","Nombre":"ESCOBAR CHAVEZ ALBINA                                                                               ","Descripcion":"CAL ASENCIO DE SALAS MZAA LOTE06 URBVIRGEN DE LA PUERTA","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":157.33,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1130799,"Longitud":-79.0043203,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"10190699965","Nombre":"CHAVEZ ARQUEROS VICTORIA YOLANDA                                                                    ","Descripcion":"RAZURI 171 VSTA.ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":324.99,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1412652,"Longitud":-79.0507865,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"10404402639","Nombre":"CASTILLO MARIN WILLIAM ORLANDO                                                                      ","Descripcion":"JR MIGUEL GRAU200 INT 1 MCDO S ROSA B AIRES","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":48.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1428651,"Longitud":-79.056307,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"17966053","Nombre":"PAREDES CASAMAYOR MARTHA                                                                            ","Descripcion":"CECILIO COX 236 VSTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":71.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.136555,"Longitud":-79.0468036,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18033729","Nombre":"AGUILAR ARTEAGA ANGELICA                                                                            ","Descripcion":"PSTO 20 MCDO SANTA ROSA BS AIRES NORTE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":49.2,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1429031,"Longitud":-79.0561264,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18040101","Nombre":"VASQUEZ VEREAU LUIS ANTONIO                                                                         ","Descripcion":"MCDO VISTA ALEGRE PSTO # 27                                           ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":642.58,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1370741,"Longitud":-79.0446666,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18040811","Nombre":"MAURICIO CALDERON EDITA MARLENI                                                                     ","Descripcion":"MDO VISTA ALEGRE PTO 67 (PLASTICO)","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":28.61,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18042098","Nombre":"HUAMAN URQUIZA JOSE                                                                                 ","Descripcion":"MCD.V.ALEGRE PTO 9192","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":357.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1369654,"Longitud":-79.0445536,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18042187","Nombre":"SAAVEDRA SANCHEZ MARGARITA JESUS                                                                    ","Descripcion":"MCDO VISTA ALEGRE PTO 81                ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":456.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1367521,"Longitud":-79.0446931,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18065549","Nombre":"LEONARDO TABOADA ANGELICA                                                                           ","Descripcion":"MDO STA.ROSA PTO 106  V.ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":192.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1368299,"Longitud":-79.0444371,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18153976","Nombre":"GAMARRA CARDENAS CATY MARISELA                                                                      ","Descripcion":"MANUEL RAZURI  296 VISTA ALEGRE         ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":40.58,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1412693,"Longitud":-79.049293,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18181212","Nombre":"RODRIGUEZ GARCÍA RICHARD                                                                            ","Descripcion":"AV CARLOS WIESSE 631 URB SANTO DOMINGUIT","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":34.3,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1146346,"Longitud":-79.0127268,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"18226679","Nombre":"JULCA LOZADA, FLORICELA                                                                             ","Descripcion":"AYACUCHO #259 URB VISTA ALEGRE","Zona":"VISTA ALEGRE [32S]","Total":1673.61,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"19036892","Nombre":"GUZMAN ALFARO JORGE                                                                                 ","Descripcion":"MCD.STA.ROSA PTO 85 A.ALEGRE                                          ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":405.14,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.136972,"Longitud":-79.0445862,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"19039051","Nombre":"AVALOS RODRIGUEZ SANTOS MARINA                                                                      ","Descripcion":"MDO STA ROSA PTO 133 VTA ALEGREVICTOR  ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":98.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1368569,"Longitud":-79.0443828,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"19529238","Nombre":"REYNA AGUILAR YENY JUDITH                                                                           ","Descripcion":"MCD STAROSA PTO 98 A - VISTA ALEGRE                                   ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":225.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1367215,"Longitud":-79.0444186,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"19557224","Nombre":"QUISPE SANCHEZ, HAYDEE  CASILDA                                                                     ","Descripcion":"MZ. M LOTE 7 VILLA FLORENCIA BUENOS AIRES SUR","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":151.19,"Distribucion":"Dismar[1]-Lider[1]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1415999,"Longitud":-79.0492434,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"19667563","Nombre":"CRUZ ULLOA CRISTINA                                                                                 ","Descripcion":"MCDO SANTA ROSA PTO 74 VISTA ALEGRE                                   ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":47.22,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"20600661419","Nombre":"REPRESENTACIONES ACEFER S.A.C.                                                                      ","Descripcion":"CAL.MANCO CAPAC NRO. 681 P.J. VISTA ALEG","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":70.95,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1368677,"Longitud":-79.0448917,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"20609082683","Nombre":"PANIFICADORA JESUS BENDICE E.I.R.L.                                                                 ","Descripcion":"AV. GUZMAN BARRON NRO. 416 URB. SANTO DOMINGUITO","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":80.0,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1069549,"Longitud":-79.0111901,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"27981421","Nombre":"LINAREZ CASTRO, OLGA NOEMI                                                                          ","Descripcion":"CALLE MIGUEL ÁNGEL MZ G LOTE 18 SANTO DOMINGUITO","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":75.03,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"41332202","Nombre":"ROMERO ZAVALA JHANET VERONICA                                                                       ","Descripcion":"ALBERTO DAVILA 422 URB SANTO DOMINGUITO                               ","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":72.56,"Distribucion":"Dismar[0]-Lider[1]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"42065372","Nombre":"SOBRADOS FATAMA NORA HAYLI                                                                          ","Descripcion":"PUESTO 107 MERCADO VISTA ALEGRE  SANTA ROSA                           ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":103.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1367478,"Longitud":-79.0444294,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"44281737","Nombre":"TITO JAUREGUI IVAN YAKOV                                                                            ","Descripcion":"PSJE SEOANE S N CON MANCO CAPAC (COSTADO MCDO)                        ","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":98.4,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1372375,"Longitud":-79.0442557,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"45120698","Nombre":"FLORES MARQUINA CINTHIA                                                                             ","Descripcion":"JULIACODESIDO 899STODOMINGUITO","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":371.32,"Distribucion":"Dismar[1]-Lider[2]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"45658992","Nombre":"LOREANO ZAVALETA LISSY                                                                              ","Descripcion":"GUZMAN BARRON 650 SANTO DOMINGUITO      ","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":39.06,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1066054,"Longitud":-79.0086812,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"48646641","Nombre":"QUISPE CHUQUILIN, YEBESNI  KARITO                                                                   ","Descripcion":"MCDO STA ROSA PTO 63","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":81.9,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"62727057","Nombre":"VILLANUEVA VARGAS, MARIA  ALEXANDIA                                                                 ","Descripcion":"PSJ. MANCO CAPAC 382 MCDO. VISTA ALEGRE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":45.6,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1369483,"Longitud":-79.0442,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"74047244","Nombre":"VERGARAY GOMEZ DAYANE MARLEY                                                                        ","Descripcion":"NICOLÁS PIEROLA 207 BUENOS AIRES NORTE","Zona":"MCDO SANTA ROSA - VISTA ALEGRE - BODEG","Total":410.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"FLORES JARA, ALEXIS ETHELVALDO","Latitud":-8.1428883,"Longitud":-79.0561117,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"},{"FechaCc":"08/07/2026","Doi":"80041560","Nombre":"ALFREDO NATIVIDAD BENITEZ CANDELA                                                                   ","Descripcion":"RICARDO PALMA 581 SANTO DOMINGUITO      ","Zona":"SANTO DOMINGUITO - PJ EL BOSQUE","Total":41.78,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ALVA NUÑEZ, NESTOR ROMUALDO","Latitud":-8.1130546,"Longitud":-79.0120577,"Placa":"T1A936","Conductor":"JUAREZ BURGOS, DAVID ADRIAN"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

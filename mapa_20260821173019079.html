@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"21/08/2026","Doi":"09931205","Nombre":"VELASQUEZ BECERRA CECILIA                                                                           ","Descripcion":"C.ANDRES HEISSMAN23-FACLO CHICO-C.DIO","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":87.85,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3129282,"Longitud":-79.4888366,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10192199111","Nombre":"HUAMAN TORRES, OSCAR                                                                                ","Descripcion":"AV 28 DE JULIO S/N LIMONCARRO","Zona":"LIMONCARRO","Total":147.84,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10192495437","Nombre":"MINCHON DE LINARES ISABEL GRACIELA                                                                  ","Descripcion":"MZ \"S\" LT12 -- CIUDAD DE DIOS","Zona":"CIUDAD DE DIOS, MAYORISTAS","Total":84.95,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3034487,"Longitud":-79.4792421,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10192503316","Nombre":"QUIROZ SOTO ELSA, ROSA                                                                              ","Descripcion":"CLL.PROGRESO NRO 184 VILLA SAN ISIDRO-LIMONCARRO","Zona":"LIMONCARRO","Total":56.11,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.3004666,"Longitud":-79.4226247,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10192518755","Nombre":"AVILA RODRIGUEZ MARIBEL                                                                             ","Descripcion":"C.LAS ROBLES MZ.K-LT.24-(BOD.BLANCA LUZ)CIUDAD DE DIOS","Zona":"CIUDAD DE DIOS, MAYORISTAS","Total":113.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10271660745","Nombre":"NINATANTA MUJICA DALILA                                                                             ","Descripcion":"MONTEGRANDE MZ.I LT.4 -- C.D DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":20.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3021512,"Longitud":-79.4813863,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10279253235","Nombre":"MUÑOZ ARRELUCEA SANTOS ANDRES                                                                       ","Descripcion":"LOS JARDINEZ MZ-HLT-08-PAKATNAMU","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":20.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":-7.3031504,"Longitud":-79.4741945,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"10280649959","Nombre":"AYAY CHAVARRY OTILIA                                                                                ","Descripcion":"AV.TEMBLADERAMZ.CLT.22 -- C.DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":81.3,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3029011,"Longitud":-79.4822739,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"17540162","Nombre":"MIO  SUAREZ , AMPARO                                                                                ","Descripcion":"AV CAJAMARCA S7N LIMONCARRO","Zona":"LIMONCARRO","Total":129.54,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"18068524","Nombre":"CASTAÑEDA RUIZ, EDITA                                                                               ","Descripcion":"CALLE SAN MARTIN #MZ J LT 3 PAKATNAMU","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":41.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.305223,"Longitud":-79.4776611,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"19196875","Nombre":"VARGAS OLIVARES ROSA AMELIA                                                                         ","Descripcion":"CALLE H.UNANUE118 -- LIMONCARRO","Zona":"LIMONCARRO","Total":28.68,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"19259655","Nombre":"TIRADO ZAMORA IRIS EUFEMIA                                                                          ","Descripcion":"MIGUEL GRAU 399SAN ISIDRO","Zona":"LIMONCARRO","Total":41.34,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"19328811","Nombre":"REVILLA REVILLA INOCENTE ELENA                                                                      ","Descripcion":"MDO. PTO.E CIUDAD DE DIOS","Zona":"CIUDAD DE DIOS, MAYORISTAS","Total":79.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"26672199","Nombre":"AZAÑERO HUACCHA DANIEL JESUS                                                                        ","Descripcion":"CLL.RENOVACION216-LIMONCARRO","Zona":"LIMONCARRO","Total":192.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.3013665,"Longitud":-79.4209585,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"27165568","Nombre":"MARREROS VELASQUEZ VDA DE GALVEZ JUANA                                                              ","Descripcion":"MARIATEGUI423CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":28.53,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CHUQUIMANGO ISPILCO, LUIS","Latitud":-7.3026638,"Longitud":-79.482346,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"27168250","Nombre":"ALBA QUIROZ DE FLORIAN NALDA MERCEDES                                                               ","Descripcion":"1 MAYO MZ-BLT- 5 CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":20.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3040872,"Longitud":-79.4837628,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"27992919","Nombre":"CASTAÑEDA SOLIS INOLINDA                                                                            ","Descripcion":"CALLE LOS ROBLES MZ-N LT-5-CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":40.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":0.0,"Longitud":0.0,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"33565561","Nombre":"BANDA MONTENEGRO ENA MARIA                                                                          ","Descripcion":"CALLE1° DE MAYO MZ D  LT 5 CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":20.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3016837,"Longitud":-79.482605,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"40592596","Nombre":"MIRANDA QUISPE SARA                                                                                 ","Descripcion":"LOS HEROES MZ-WLT-01-PAKATNAMU","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":43.36,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3058665,"Longitud":-79.4768564,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"40841359","Nombre":"CASTRO COTRINA , ANDY  WILLIAM                                                                      ","Descripcion":"CL. CAJAMARCA 482 - SAN ISIDRO LIMONCARRO","Zona":"LIMONCARRO","Total":186.0,"Distribucion":"Dismar[1]-Lider[1]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2339166,"Longitud":-79.4219483,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"42357727","Nombre":"LINARES ALVA, ZOILA ANGELICA                                                                        ","Descripcion":"CL. PRIMERO DE MAYO MZ C LT #1 - CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":33.15,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3036214,"Longitud":-79.4834263,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"43225616","Nombre":" TORRES  FLORES, ELIZABETH                                                                          ","Descripcion":"LOS JARDINES MESA REDONDA 260","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":55.5,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.300875,"Longitud":-79.4756483,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"45797185","Nombre":"GALVEZ VILLA ISABEL NHEMI                                                                           ","Descripcion":"JOSE CARLOS MARIATEGUI MZ D  LT 13 CIUDAD DE DIOS ","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":75.48,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3024836,"Longitud":-79.4825001,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"45966009","Nombre":"SAUCEDO MORA, ZAIRA                                                                                 ","Descripcion":"CLL. CAJAMARCA 324 VILLA SAN ISIDRO","Zona":"LIMONCARRO","Total":32.5,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2339174,"Longitud":-79.4219522,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"47312548","Nombre":"VASQUEZ GARAY, MARUJA  CRISTINA                                                                     ","Descripcion":"CLL. ANDRES HEISSMAN #13 FACLO CHICO","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":81.9,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3124106,"Longitud":-79.4888963,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"74984332","Nombre":"ROJAS ORTIZ, CARLOS NARCISO                                                                         ","Descripcion":"CALLE CHIMU N° 100 CIUDAD DE DIOS","Zona":"CIUDAD DE DIOS, MAYORISTAS","Total":19.05,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3054084,"Longitud":-79.4824298,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"75091123","Nombre":"BASILIO RONCAL, VICTOR  PAUL                                                                        ","Descripcion":"CLL LOS PRECURSORES MZ F LT 05 - PAKATNAMU","Zona":"SAN MARTIN - HUASCAR","Total":945.0,"Distribucion":"Dismar[1]-Lider[0]","Rv":"ZEGARRA  ROMERO, EDGAR EDUALDO","Latitud":-7.2339166,"Longitud":-79.4219419,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"76967485","Nombre":"VASQUEZ GARAY, SUSANA                                                                               ","Descripcion":"s/n faclo  chico esquina llendo  fáclo grand","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":54.15,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3133017,"Longitud":-79.4893707,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"80162873","Nombre":"DIAZ DAVALOS ROSA                                                                                   ","Descripcion":"1 DE MAYO MZ.C-LT.11-CIUDAD DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":44.1,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3030236,"Longitud":-79.483145,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"},{"FechaCc":"21/08/2026","Doi":"80403899","Nombre":"HUAYLLA FLORIAN ELENA                                                                               ","Descripcion":"AV.MONTEGRANDE135 -- C.DE DIOS","Zona":"PAKATNAMU - CIUDAD DE DIOS","Total":28.55,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CHUQUIMANGO  ISPILCO, LUIS","Latitud":-7.3029723,"Longitud":-79.4799065,"Placa":"T2J810","Conductor":"CERVERA LEON, WALTER TEOBALDO"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>

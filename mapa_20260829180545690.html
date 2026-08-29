@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+                        <html lang='es'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Mapa Geo</title>
+                        <link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'/>
+                        <style>
+                        *{margin:0;padding:0;box-sizing:border-box;}
+                        body{font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+                        
+                        /* Cabecera superior */
+                        #cab{background:#fff;border-bottom:1px solid #dde2ea;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;z-index:1000;}
+                        .titulo-mapa{font-size:15px;font-weight:normal;color:#1e293b;letter-spacing:0.5px;}
+                        .etiqueta-box{background:#f1f5f9;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:700;color:#334155;border:1px solid #cbd5e1;}
+                        .info-derecha{margin-left:auto;display:flex;align-items:center;gap:12px;}
+                        #inf{font-size:11px;color:#64748b;}
+                        #tot{font-size:13px;color:#000000;font-weight:normal;background:#dcfce3;padding:3px 8px;border-radius:4px;}
+                        
+                        /* Contenedor del Mapa */
+                        #mapa{flex:1;width:100%;z-index:1;}
+                        
+                        /* Pie de página para Zonas */
+                        #pie{background:#fff;border-top:1px solid #dde2ea;color:#334155;padding:8px 14px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-height:25vh;overflow-y:auto;z-index:1000;}
+                        .lbl-zonas{color:#1e293b;font-weight:800;letter-spacing:1px;}
+                        
+                        /* Estilos del Popup */
+                        .popup-content{font-size:12px;line-height:1.6;min-width:170px;}
+                        .popup-content strong{font-size:13px;color:#1e293b;}
+                        .popup-zona{color:#3b82f6;font-weight:600;}
+                        .popup-total{color:#16a34a;font-weight:700;}
+                        </style>
+                        </head>
+                        <body>
+                        
+                        <div id='cab'>
+                          <span class='titulo-mapa'>Preventa:</span>
+                          <span id='info-fecha' class='etiqueta-box'></span>
+                          <span id='info-vehiculo' class='etiqueta-box'></span>
+                          <div class='info-derecha'>
+                              <span id='inf'></span>
+                              <span id='tot'></span>
+                          </div>
+                        </div>
+
+                        <div id='mapa'></div>
+
+                        <div id='pie'>
+                            <span class='lbl-zonas'>ZONAS:</span>
+                            <span id='info-zonas-pie'></span>
+                        </div>
+
+                        <script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>
+                        <script>
+                        const PALETA=['#3b82f6','#ef4444','#16a34a','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#0ea5e9','#a855f7','#14b8a6'];
+                        
+                        // 🔹 LÓGICA MAESTRA: Recibir, Ordenar por Zona y Asignar Número Oficial
+                        const datosTodos = [{"FechaCc":"29/08/2026","Doi":"00046084","Nombre":"SARAVIA DE REATEGUI JESUSA                                                                          ","Descripcion":"MZ B LTE 3 SAN ANDRES                                                 ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":103.27,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1354472,"Longitud":-79.0488806,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10179208046","Nombre":"TORRES POLO GERONEL                                                                                 ","Descripcion":"JUAN JULIO GANOZA 204 URB CALIFORNIA                                  ","Zona":"CALIFORNIA - STA. EDELMIRA","Total":148.2,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1301812,"Longitud":-79.0415889,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10181326129","Nombre":"MEDINA AGREDA NEYDA MAGALI                                                                          ","Descripcion":"LOS CEDROS 200  HUAMAN                  ","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":286.16,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1381533,"Longitud":-79.0422317,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10327602719","Nombre":"FIGUEROA VELASQUEZ GLADYS                                                                           ","Descripcion":"CL LOS CLAVELES # 118 - CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":45.64,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1329909,"Longitud":-79.0404066,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10414255952","Nombre":"AMAYO SANCHEZ ALEX                                                                                  ","Descripcion":"LOS GIRASOLES 197STA EDELMIRA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":245.96,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1320035,"Longitud":-79.0434071,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10426364072","Nombre":"BELLO  MANTILLA , KELER  ALEXANDER                                                                  ","Descripcion":"URB SAN ANDRÉS MZ U LT 10","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":142.49,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1354628,"Longitud":-79.0489024,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10437705955","Nombre":"ORDONIO CRUZ YMELDA MARCIONILA                                                                      ","Descripcion":"CAL LOS JAZMINES NRO424 URBCALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":88.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1305132,"Longitud":-79.0387121,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10448143517","Nombre":"GARCIA AVILA TAHINA IRENE                                                                           ","Descripcion":"CA.LOS PINOS MZA. LL LOTE. 35 S.ANDRES V","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":51.41,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1341671,"Longitud":-79.0511915,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10702660144","Nombre":"RAMIREZ ROMERO JOSELYN NICOLE                                                                       ","Descripcion":"MZP LT16 SAN ANDRÉS V ETAPA                                           ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":91.57,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1338798,"Longitud":-79.0512672,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"10801795205","Nombre":"ARAUJO RUIZ ROXANA LILI                                                                             ","Descripcion":"JUAN JULIO GANOZA 204 URB CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":269.71,"Distribucion":"Dismar[1]-Lider[2]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1299752,"Longitud":-79.0416191,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"17819656","Nombre":"HINOSTROZA DE ISIDRO CORINA                                                                         ","Descripcion":"MZ L LT 7 LIBERACION SOCIAL                                           ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":125.38,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1301084,"Longitud":-79.0495444,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"17864052","Nombre":"RODRIGUEZ JARA BENJAMINA                                                                            ","Descripcion":"CASUARINAS 524 CALIFORNIA                                             ","Zona":"CALIFORNIA - STA. EDELMIRA","Total":32.7,"Distribucion":"Dismar[1]-Lider[0]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1348086,"Longitud":-79.0422802,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"17931307","Nombre":"ARROYO CARLOS ROSA                                                                                  ","Descripcion":"Av victor Raúl 380 Huaman","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":56.83,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1415356,"Longitud":-79.0466709,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18038857","Nombre":"BALLENA MONZON MARGARITA SANTOS                                                                     ","Descripcion":"MZ A LT 19  AV. CHOTA                                                 ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":389.81,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1323956,"Longitud":-79.046664,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18065526","Nombre":"LA ROSA ZAVALETA, SIMON  WILFREDO                                                                   ","Descripcion":"AV SOANE 992  HUAMAN","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":65.11,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.13846,"Longitud":-79.0448485,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18065574","Nombre":"ARROYO RIVERA SANTOS                                                                                ","Descripcion":"LOSMANZANOS196URB.ELGOLF","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":46.12,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1395208,"Longitud":-79.036233,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18066548","Nombre":"RODRIGUEZ GOMEZ RITA LAURA                                                                          ","Descripcion":"MZ K LT16 LIBERACION SOCIAL             ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":29.06,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1308367,"Longitud":-79.0483989,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18068639","Nombre":"MORENO NUÑEZ MILUSKA MERCEDES                                                                       ","Descripcion":"LAS CHIRAS 211 CALIFORNIA               ","Zona":"CALIFORNIA - STA. EDELMIRA","Total":29.53,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1307348215,"Longitud":-79.0425321087,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18068855","Nombre":"ARROYO ESPINOZA MERY                                                                                ","Descripcion":"LEONCIO PRADO 464 HUAMAN VISTA ALEGRE","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":35.62,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1410441,"Longitud":-79.046526,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18080812","Nombre":"MONTOYA TORRES, LOURDES MARLENY                                                                     ","Descripcion":"CL ROSALES # 295 - CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":51.06,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1345533,"Longitud":-79.0426679,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18114909","Nombre":"GOMEZ RODRIGUEZ, ANA  MARIA                                                                         ","Descripcion":"LOS SAUCES 124 - VISTA ALEGRE","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":79.13,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1395673,"Longitud":-79.0435421,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18153462","Nombre":"ULLOA HUAMAN, RAQUEL  SOLEDAD                                                                       ","Descripcion":"AV. PROLONGACIÓN VALEJO Y AV. FATIGA MZ. E SAN ELOY","Zona":"CALIFORNIA - STA. EDELMIRA","Total":109.16,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1315948,"Longitud":-79.0339669,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18154237","Nombre":"ZAVALETA AGUSTIN ROBERT ALEX                                                                        ","Descripcion":"MANUEL SEOANE 998-1000 HUAMAN           ","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":30.78,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1383249,"Longitud":-79.044868,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18186788","Nombre":"RIVAS PIÑA ROSA ELISABETH                                                                           ","Descripcion":"AV.VICTORRAUL 327V.ALEGRE","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":58.7,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1419647,"Longitud":-79.0470902,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18202344","Nombre":"VARGAS DIESTRA, WALTER BERNARDO                                                                     ","Descripcion":"CL GIRASOLES 380 - CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":38.04,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1340745,"Longitud":-79.0452107,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"18226318","Nombre":"LEON RUIZ DORIS                                                                                     ","Descripcion":"A.V. HUAMAN MZ. O LT. 31                ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":34.85,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"19042418","Nombre":"BELLO BALERIANO CRESENCIO HERMOGENES                                                                ","Descripcion":"MZULT105ETAPASANANDRES","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":87.31,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1354614,"Longitud":-79.0516725,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"19069214","Nombre":"GARCÍA MORENO ANITA                                                                                 ","Descripcion":"JHON KENNEDY # 293 HUAMAN               ","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":33.96,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1374436,"Longitud":-79.0436014,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"19088029","Nombre":"VARELA COLLAVE SILVIA                                                                               ","Descripcion":"STA ROSA MZ  D LT 15 LOS GIRASOLES                                    ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":612.56,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1348497,"Longitud":-79.0524846,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20559839257","Nombre":"INVERSIONES TONYS PLACE EIRL                                                                        ","Descripcion":"MZA.FLOTE.1INT.V03URB.LASPALMASVICTORLARCOHERRERA","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":346.01,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.14118,"Longitud":-79.0297833,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20603755147","Nombre":"GUGA TRADING COMPANY SAC - GUGA SAC                                                                 ","Descripcion":"URB SAN ANDRÉS MZ LL3  LT 1  ( SAN ANDRES )","Zona":"LIBER. SOCIAL S. ANDRES VETA SOCCER CITY [89S]","Total":128.04,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1302751,"Longitud":-79.0456003,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20606843675","Nombre":"FARAGAMA RETAIL PERU S.A.C.                                                                         ","Descripcion":"CALLE MZ G LT 8 URB LAS PALMAS DEL GOLF ETAPA 2","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":227.39,"Distribucion":"Dismar[2]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1404446,"Longitud":-79.0307797,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20611447800","Nombre":"SOLUCIONES INTEGRALES & GENERALES 360 E.I.R.L.                                                      ","Descripcion":"LAS MORERAS NRO. 494 URB. CALIFORNIA                                  ","Zona":"CALIFORNIA - STA. EDELMIRA","Total":73.32,"Distribucion":"Dismar[0]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1309303,"Longitud":-79.0389443,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20611739631","Nombre":"CAPRI´S MARKET SAC                                                                                  ","Descripcion":"CALLE SANTA ROSA 374 URB LA MERCED","Zona":"LA PERLA - INGENIERIA - ARBOLEDA - LA MERCED","Total":277.17,"Distribucion":"Dismar[2]-Lider[2]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1276368276,"Longitud":-79.0369815746,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20612402800","Nombre":"TIENDAS PUNTO M S.A.C.                                                                              ","Descripcion":"CAL.PAIJILES MZA. K LOTE. 9 URB. LOS PINOS","Zona":"LOS PINOS V. HERMOSA ROSALES S. ANDRES [76S]","Total":144.05,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20613011677","Nombre":"BRYGALI TRADE S.A.C.                                                                                ","Descripcion":"AV. AV LARCO NRO. 1779 URB. URB. FATIMA (FRENTE A LA UCV)","Zona":"CALIFORNIA - STA. EDELMIRA","Total":74.34,"Distribucion":"Dismar[1]-Lider[2]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.130091,"Longitud":-79.0437716,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"20615147479","Nombre":"MERCADOS TRADICIONALES S.A.C.                                                                       ","Descripcion":"AV. PROLONGACION CESAR VALLEJO MZA. 12 LOTE. 8 URB. LOS JARDINES DEL GOLF","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":575.4,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1343665,"Longitud":-79.0357398,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"26666758","Nombre":"AGUILAR PABLO CARMEN YOLANDA                                                                        ","Descripcion":"MCDO STA EDELMIRA PTO 92","Zona":"CALIFORNIA - STA. EDELMIRA","Total":38.21,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1341087,"Longitud":-79.0455548,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"26954901","Nombre":"GOMES VARES MARIA ANTONIA                                                                           ","Descripcion":"LAS PONCIANAS MZ A3 LT 08SECTOR ROSALES DE SAN LUIS.                  ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":174.58,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1331296,"Longitud":-79.0533736,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"33647294","Nombre":"GONZAGA DE IDROGO CARMEN                                                                            ","Descripcion":"CL GIRASOLES 294 CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":142.52,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1330067,"Longitud":-79.0443697,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"41027969","Nombre":"SEGURA ALVA MARCOS JAVIER                                                                           ","Descripcion":"PT 30 31 MCDO PROGRESO LIBERA","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":147.59,"Distribucion":"Dismar[0]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1321531,"Longitud":-79.0497703,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"41768281","Nombre":"AGREDA NUÑEZ, SHIRELL DUANNY                                                                        ","Descripcion":"PSJ LOS LAURELES 110 LOS MANGOS HUAMAN","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":84.22,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1406581,"Longitud":-79.043306,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"41802660","Nombre":"OTINIANO PAREDES HENRY                                                                              ","Descripcion":"PERRICHOLI MZ B LT 16 URB SAN PEDRO     ","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":92.64,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1437654,"Longitud":-79.0469885,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"42043634","Nombre":"TIRADO ALONSO, MARTINA CIRA                                                                         ","Descripcion":"MZ F LT 25 URB SAN PEDRO","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":100.07,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.142661,"Longitud":-79.0449447,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"42204279","Nombre":"LEON RUIZ JUANA JANETH                                                                              ","Descripcion":"MZ.A LOT.20 ROSALES DE SAN LUIS         ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":51.46,"Distribucion":"Dismar[1]-Lider[0]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1324944,"Longitud":-79.0521701,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"42798095","Nombre":"FIESTAS CALDERON, EVELYN DENISE                                                                     ","Descripcion":"LAS CUCARDAS MZ Z LTE 08 URB LAS PALMAS DEL GOLF","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":53.64,"Distribucion":"Dismar[1]-Lider[0]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":0.0,"Longitud":0.0,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"43738399","Nombre":"HORNA QUISPE ELIZABETH MERCEDES                                                                     ","Descripcion":"JHON KENEDI 144 HUAMAN","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":31.4,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.139719,"Longitud":-79.0450841,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"43932663","Nombre":"ROBLES DIAZ GILBERTO                                                                                ","Descripcion":"CALLE LOS EUCALIPTOSMZ A LT  10 VALLE PALMERAS DE SAN ANDRES          ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":281.55,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1346211,"Longitud":-79.0550186,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"44869068","Nombre":"MONTERO  ABAD DE ESCUDERO, YENY  CLARIBEL                                                           ","Descripcion":"MZ E LT 03 SAN JOSE DE CALIFORNIA","Zona":"CALIFORNIA - STA. EDELMIRA","Total":224.18,"Distribucion":"Dismar[1]-Lider[1]","Rv":"TRUJILLO RISCO, RUBEN DARIO","Latitud":-8.1353915,"Longitud":-79.0394822,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"45591577","Nombre":"LOPEZ SEGOVIA, OSCAR  OLIVER                                                                        ","Descripcion":"CALLE LOS MANGOS  408 - EL GOLF","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":185.92,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1405366,"Longitud":-79.0378817,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"47943592","Nombre":"SANCHEZ CHAVEZ, LYNN ESTEFANY                                                                       ","Descripcion":"MZ E LTE 04 (PANADERÍA) URB SAN PEDRO","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":131.28,"Distribucion":"Dismar[1]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1431636,"Longitud":-79.0465198,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"70236705","Nombre":"CALDAS REYES, PATRICIA  FIORELLA MILAGROS                                                           ","Descripcion":"MZ K LT 24 URB SAN PEDRO 1ERA ETAPA","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":50.79,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1396926,"Longitud":-79.0422544,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"75153850","Nombre":"CORNEJO FERNANDEZ PATRICK                                                                           ","Descripcion":"MZ Ñ LT 3 - SAN ANDRES V ETAPA                                        ","Zona":"LIBERACION SOCIAL - SAN ANDRES V","Total":119.73,"Distribucion":"Dismar[1]-Lider[1]","Rv":"CARRERA MANTILLA, ROSARIO JESUS","Latitud":-8.1317508,"Longitud":-79.0460268,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"},{"FechaCc":"29/08/2026","Doi":"75841873","Nombre":"RABINES MORA, BRITHANY  ZARIEL                                                                      ","Descripcion":"MONDOÑEDO 526 HUAMAN","Zona":"HUAMAN - EL GOLF - TUPAC AMARU","Total":96.96,"Distribucion":"Dismar[0]-Lider[1]","Rv":"PAREDES TRUJILLO, HOHN","Latitud":-8.1390313,"Longitud":-79.041046,"Placa":"T2G897","Conductor":"PINTADO SILVA, ALEXIS"}];
+
+                        // 🔹 LÓGICA MAESTRA: Ordenamos por Zona y luego por Cliente
+                        datosTodos.sort(function(a, b) {
+                            var zA = String(a.Zona || 'SIN ZONA').toUpperCase();
+                            var zB = String(b.Zona || 'SIN ZONA').toUpperCase();
+                            
+                            if (zA < zB) return -1;
+                            if (zA > zB) return 1;
+                            
+                            // Desempate por Nombre de Cliente
+                            var nA = String(a.Nombre || '').toUpperCase();
+                            var nB = String(b.Nombre || '').toUpperCase();
+                            
+                            if (nA < nB) return -1;
+                            if (nA > nB) return 1;
+                            
+                            return 0;
+                        });
+
+                        datosTodos.forEach(function(p, idx) {
+                            p.numOficial = idx + 1;
+                        });
+
+                        // 🔹 El mapa extrae sus puntos de la lista principal ya ordenada
+                        const datosMapa = datosTodos.filter(function(p) {
+                            return Number(p.Latitud || 0) !== 0 && Number(p.Longitud || 0) !== 0;
+                        });
+
+                        const mapa=L.map('mapa').setView([-9.5,-77.5],6);
+                        
+                        L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{
+                          attribution:'Google Maps',
+                          maxZoom:20
+                        }).addTo(mapa);
+
+                        const zonasUnicas=[...new Set(datosTodos.map(p => p.Zona || 'SIN ZONA'))].sort();
+                        const colorPorZona={};
+                        zonasUnicas.forEach((z,i)=> colorPorZona[z]=PALETA[i % PALETA.length]);
+
+                        const bounds=[];
+
+                        // 🔹 Modificado para usar p.numOficial
+                        datosMapa.forEach((p)=>{
+                          const num = p.numOficial; 
+                          const zona=p.Zona || 'SIN ZONA';
+                          const color=colorPorZona[zona] || '#3b82f6';
+                          
+                          const total=Number(p.Total || 0);
+                          const nombre=(p.Nombre || '').trim();
+                          const descripcion=(p.Descripcion || '');
+                          const distribucion=(p.Distribucion || '');
+                          const doi=(p.Doi || '');
+                          const fechaCc=(p.FechaCc || '');
+                          const rvVendedor=(p.Rv || ''); 
+
+                          const fs=num >= 100 ? 9 : (num >= 10 ? 11 : 13);
+
+                          const icon=L.divIcon({
+                            className:'',
+                            html:'<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">' +
+                                 '' +
+                                 '<circle cx="18" cy="20" r="14" fill="rgba(0,0,0,0.4)"/>' + 
+                                 '' +
+                                 '<circle cx="18" cy="16" r="14" fill="' + color + '" stroke="#ffffff" stroke-width="2.5"/>' +
+                                 '' +
+                                 '<text x="18" y="16" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-size="' + fs + '" font-family="Segoe UI,sans-serif" font-weight="900">' + num + '</text>' +
+                                 '</svg>',
+                            iconSize:[36,36],
+                            iconAnchor:[18,20]
+                          });
+
+                          const marker=L.marker([p.Latitud,p.Longitud],{icon});
+                          bounds.push([p.Latitud,p.Longitud]);
+
+                          const textoDistribucionPopup = rvVendedor ? distribucion + ' - ' + rvVendedor : distribucion;
+
+                          marker.bindPopup(
+                            '<div class="popup-content">' +
+                            '<strong>' + num + ' - ' + nombre + '</strong><br>' +
+                            '<span class="popup-zona">' + zona + '</span><br>' +
+                            descripcion + '<br>' +
+                            'DOI: ' + doi + '<br>' +
+                            fechaCc + '<br>' +
+                            textoDistribucionPopup + '<br>' +
+                            '<span class="popup-total">S/ ' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</span>' +
+                            '</div>',
+                            {maxWidth:260}
+                          );
+
+                          marker.addTo(mapa);
+                        });
+
+                        if(bounds.length > 0){
+                          mapa.fitBounds(bounds,{padding:[30,30]});
+                        }
+
+                        let textoVehiculo = '';
+                        let textoFecha = '';
+
+                        if(datosTodos.length > 0) {
+                            const placa = datosTodos[0].Placa || '';
+                            const conductor = datosTodos[0].Conductor || '';
+                            if(placa || conductor) textoVehiculo = `[${placa}] ${conductor}`;
+
+                            textoFecha = datosTodos[0].FechaCc || '';
+                        }
+                        
+                        if(!textoFecha) {
+                            textoFecha = new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        }
+
+                        document.getElementById('info-fecha').textContent = textoFecha;
+
+                        const lblVehiculo = document.getElementById('info-vehiculo');
+                        lblVehiculo.textContent = textoVehiculo;
+                        if(!textoVehiculo) lblVehiculo.style.display = 'none';
+
+                        const totalGeneralAbsoluto = datosTodos.reduce((s,p)=> s + Number(p.Total || 0), 0);
+                        document.getElementById('inf').textContent = datosMapa.length + ' puntos en mapa de ' + datosTodos.length;
+                        document.getElementById('tot').textContent = 'Total S/ ' + totalGeneralAbsoluto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                        document.getElementById('info-zonas-pie').textContent = zonasUnicas.join(' • ');
+
+                        </script>
+                        </body>
+                        </html>
